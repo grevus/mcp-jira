@@ -4,9 +4,14 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 
+	"github.com/labstack/echo/v4"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/grevus/mcp-jira/internal/auth"
 	"github.com/grevus/mcp-jira/internal/config"
 	"github.com/grevus/mcp-jira/internal/handlers"
 	"github.com/grevus/mcp-jira/internal/jira"
@@ -14,7 +19,6 @@ import (
 	"github.com/grevus/mcp-jira/internal/rag/retriever"
 	"github.com/grevus/mcp-jira/internal/rag/store"
 	"github.com/grevus/mcp-jira/internal/register"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
@@ -76,6 +80,18 @@ func main() {
 		log.Println("mcp-jira: starting stdio transport")
 		if err := srv.Run(ctx, &mcp.StdioTransport{}); err != nil {
 			log.Fatalf("stdio transport: %v", err)
+		}
+
+	case config.ModeHTTP:
+		e := echo.New()
+		e.Use(echo.WrapMiddleware(auth.Middleware(cfg.MCPAPIKey)))
+
+		mcpHandler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return srv }, nil)
+		e.Any("/mcp", echo.WrapHandler(mcpHandler))
+
+		log.Printf("mcp-jira: starting HTTP transport on %s", cfg.MCPAddr)
+		if err := e.Start(cfg.MCPAddr); err != nil {
+			log.Fatalf("http transport: %v", err)
 		}
 	}
 }
