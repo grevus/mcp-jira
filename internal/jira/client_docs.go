@@ -72,12 +72,48 @@ func extractStatusHistory(cl *docsChangelog) []string {
 	return result
 }
 
+// docsLinkedIssue — вложенный объект с ключом связанной задачи.
+type docsLinkedIssue struct {
+	Key string `json:"key"`
+}
+
+// docsIssueLink — один элемент массива issuelinks.
+// Jira гарантирует, что присутствует ровно одно из двух полей.
+type docsIssueLink struct {
+	OutwardIssue *docsLinkedIssue `json:"outwardIssue"`
+	InwardIssue  *docsLinkedIssue `json:"inwardIssue"`
+}
+
+// extractLinkedIssues возвращает ключи связанных задач в том порядке, в котором
+// они пришли из Jira. Элементы с обоими nil-полями пропускаются.
+// При пустом результате возвращает nil.
+func extractLinkedIssues(links []docsIssueLink) []string {
+	if len(links) == 0 {
+		return nil
+	}
+	var result []string
+	for _, l := range links {
+		switch {
+		case l.OutwardIssue != nil:
+			result = append(result, l.OutwardIssue.Key)
+		case l.InwardIssue != nil:
+			result = append(result, l.InwardIssue.Key)
+		// оба nil — пропускаем
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
 type docsIssueFields struct {
 	Summary     string          `json:"summary"`
 	Status      issueStatus     `json:"status"`
 	Assignee    *issueAssignee  `json:"assignee"`
 	Description json.RawMessage `json:"description"` // может быть string, null или ADF-объект
 	Updated     string          `json:"updated"`
+	IssueLinks  []docsIssueLink `json:"issuelinks"`
 }
 
 const updatedTimeLayout = "2006-01-02T15:04:05.000-0700"
@@ -156,7 +192,6 @@ func (c *HTTPClient) fetchIssueComments(ctx context.Context, issueKey string) ([
 // Горутина проходит постранично через /rest/api/3/search/jql, отправляя каждый
 // issue как IssueDoc. При успехе оба канала закрываются. При ошибке — сначала
 // отправляется ошибка в errCh, затем оба канала закрываются.
-// Поля StatusHistory, LinkedIssues оставляются пустыми (Tasks 18-19).
 func (c *HTTPClient) IterateIssueDocs(ctx context.Context, projectKey string) (<-chan IssueDoc, <-chan error) {
 	out := make(chan IssueDoc)
 	errCh := make(chan error, 1)
@@ -221,7 +256,7 @@ func (c *HTTPClient) IterateIssueDocs(ctx context.Context, projectKey string) (<
 
 				comments, err := c.fetchIssueComments(ctx, ir.Key)
 				if err != nil {
-					errCh <- err
+					errCh <- fmt.Errorf("jira: IterateIssueDocs: fetch comments for %s: %w", ir.Key, err)
 					return
 				}
 
@@ -234,6 +269,7 @@ func (c *HTTPClient) IterateIssueDocs(ctx context.Context, projectKey string) (<
 					Description:   parseDescription(ir.Fields.Description),
 					Comments:      comments,
 					StatusHistory: extractStatusHistory(ir.Changelog),
+					LinkedIssues:  extractLinkedIssues(ir.Fields.IssueLinks),
 					UpdatedAt:     parseUpdated(ir.Fields.Updated),
 				}
 

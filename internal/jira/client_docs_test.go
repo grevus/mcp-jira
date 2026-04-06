@@ -422,3 +422,143 @@ func TestIterateIssueDocs_CommentsHTTPError(t *testing.T) {
 	require.Contains(t, err.Error(), "500")
 	require.Empty(t, docs)
 }
+
+// TestExtractLinkedIssues — unit-тест чистой функции extractLinkedIssues.
+func TestExtractLinkedIssues(t *testing.T) {
+	tests := []struct {
+		name  string
+		links []docsIssueLink
+		want  []string
+	}{
+		{
+			name:  "nil input returns nil",
+			links: nil,
+			want:  nil,
+		},
+		{
+			name:  "empty slice returns nil",
+			links: []docsIssueLink{},
+			want:  nil,
+		},
+		{
+			name: "only outward issues",
+			links: []docsIssueLink{
+				{OutwardIssue: &docsLinkedIssue{Key: "ABC-2"}},
+				{OutwardIssue: &docsLinkedIssue{Key: "ABC-4"}},
+			},
+			want: []string{"ABC-2", "ABC-4"},
+		},
+		{
+			name: "only inward issues",
+			links: []docsIssueLink{
+				{InwardIssue: &docsLinkedIssue{Key: "ABC-3"}},
+				{InwardIssue: &docsLinkedIssue{Key: "ABC-5"}},
+			},
+			want: []string{"ABC-3", "ABC-5"},
+		},
+		{
+			name: "mix of outward and inward",
+			links: []docsIssueLink{
+				{OutwardIssue: &docsLinkedIssue{Key: "ABC-2"}},
+				{InwardIssue: &docsLinkedIssue{Key: "ABC-3"}},
+				{OutwardIssue: &docsLinkedIssue{Key: "ABC-4"}},
+			},
+			want: []string{"ABC-2", "ABC-3", "ABC-4"},
+		},
+		{
+			name: "element with both nil pointers is skipped",
+			links: []docsIssueLink{
+				{OutwardIssue: &docsLinkedIssue{Key: "ABC-2"}},
+				{},
+				{InwardIssue: &docsLinkedIssue{Key: "ABC-3"}},
+			},
+			want: []string{"ABC-2", "ABC-3"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := extractLinkedIssues(tc.links)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestIterateIssueDocs_LinkedIssues проверяет, что issuelinks из ответа Jira
+// правильно маппятся в doc.LinkedIssues.
+func TestIterateIssueDocs_LinkedIssues(t *testing.T) {
+	const fixtureWithLinks = `{
+		"issues": [
+			{
+				"key": "ABC-1",
+				"fields": {
+					"summary": "Issue with links",
+					"status": {"name": "In Progress"},
+					"assignee": null,
+					"description": null,
+					"updated": "2026-01-15T10:30:00.000+0000",
+					"issuelinks": [
+						{"outwardIssue": {"key": "ABC-2"}},
+						{"inwardIssue":  {"key": "ABC-3"}},
+						{"outwardIssue": {"key": "ABC-4"}}
+					]
+				}
+			}
+		]
+	}`
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/comment") {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"comments": []}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(fixtureWithLinks))
+	}))
+	defer srv.Close()
+
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
+
+	docs, err := collectDocs(t, out, errCh)
+	require.NoError(t, err)
+	require.Len(t, docs, 1)
+	require.Equal(t, []string{"ABC-2", "ABC-3", "ABC-4"}, docs[0].LinkedIssues)
+}
+
+// TestIterateIssueDocs_CommentsErrorHasContext проверяет, что ошибка из
+// fetchIssueComments содержит ключ issue для диагностики.
+func TestIterateIssueDocs_CommentsErrorHasContext(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/comment") {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"errorMessages":["server error"]}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"issues": [
+				{
+					"key": "ABC-1",
+					"fields": {
+						"summary": "First issue",
+						"status": {"name": "In Progress"},
+						"assignee": null,
+						"description": null,
+						"updated": "2026-01-15T10:30:00.000+0000"
+					}
+				}
+			]
+		}`))
+	}))
+	defer srv.Close()
+
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
+
+	_, err := collectDocs(t, out, errCh)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ABC-1", "ошибка должна содержать ключ issue")
+}
