@@ -104,8 +104,8 @@ func (c *HTTPClient) fetchIssueComments(ctx context.Context, issueKey string) ([
 		return nil, nil
 	}
 	texts := make([]string, 0, len(cr.Comments))
-	for _, c := range cr.Comments {
-		texts = append(texts, parseTextOrADF(c.Body))
+	for _, entry := range cr.Comments {
+		texts = append(texts, parseTextOrADF(entry.Body))
 	}
 	return texts, nil
 }
