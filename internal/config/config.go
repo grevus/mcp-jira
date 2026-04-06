@@ -1,5 +1,10 @@
 package config
 
+import (
+	"fmt"
+	"os"
+)
+
 // Mode определяет режим запуска сервера.
 type Mode string
 
@@ -10,7 +15,6 @@ const (
 )
 
 // Config содержит всю конфигурацию приложения.
-// Конструктор Load появится в Task 4.
 type Config struct {
 	Mode         Mode
 	JiraBaseURL  string
@@ -22,4 +26,35 @@ type Config struct {
 	OpenAIAPIKey string
 	MCPAPIKey    string // только для http
 	MCPAddr      string // только для http, default ":8080"
+}
+
+// Load читает переменные окружения и возвращает Config для указанного mode.
+// Общие обязательные переменные: JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, DATABASE_URL.
+func Load(mode Mode) (*Config, error) {
+	required := []struct {
+		env   string
+		value *string
+	}{
+		{"JIRA_BASE_URL", nil},
+		{"JIRA_EMAIL", nil},
+		{"JIRA_API_TOKEN", nil},
+		{"DATABASE_URL", nil},
+	}
+
+	values := make([]string, len(required))
+	for i, r := range required {
+		v := os.Getenv(r.env)
+		if v == "" {
+			return nil, fmt.Errorf("config: %s is required", r.env)
+		}
+		values[i] = v
+	}
+
+	return &Config{
+		Mode:         mode,
+		JiraBaseURL:  values[0],
+		JiraEmail:    values[1],
+		JiraAPIToken: values[2],
+		DatabaseURL:  values[3],
+	}, nil
 }
