@@ -63,3 +63,62 @@ func TestSearchKnowledge_PropagatesError(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "retriever error")
 }
+
+func TestSearchKnowledge_TopKDefault(t *testing.T) {
+	fake := &fakeKnowledgeRetriever{}
+
+	h := handlers.SearchKnowledge(fake)
+	_, err := h(context.Background(), handlers.SearchKnowledgeInput{
+		ProjectKey: "ABC",
+		Query:      "auth",
+		TopK:       0,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, 5, fake.gotTopK)
+}
+
+func TestSearchKnowledge_TopKNegativeDefault(t *testing.T) {
+	fake := &fakeKnowledgeRetriever{}
+
+	h := handlers.SearchKnowledge(fake)
+	_, err := h(context.Background(), handlers.SearchKnowledgeInput{
+		ProjectKey: "ABC",
+		Query:      "auth",
+		TopK:       -3,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, 5, fake.gotTopK)
+}
+
+func TestSearchKnowledge_TopKValid(t *testing.T) {
+	fake := &fakeKnowledgeRetriever{}
+
+	h := handlers.SearchKnowledge(fake)
+	_, err := h(context.Background(), handlers.SearchKnowledgeInput{
+		ProjectKey: "ABC",
+		Query:      "auth",
+		TopK:       15,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, 15, fake.gotTopK)
+}
+
+func TestSearchKnowledge_TopKExceedsMax(t *testing.T) {
+	fake := &fakeKnowledgeRetriever{}
+
+	h := handlers.SearchKnowledge(fake)
+	_, err := h(context.Background(), handlers.SearchKnowledgeInput{
+		ProjectKey: "ABC",
+		Query:      "auth",
+		TopK:       21,
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "top_k")
+	require.Contains(t, err.Error(), "21")
+	// Search не должен быть вызван — gotTopK остаётся нулём (zero value)
+	require.Equal(t, 0, fake.gotTopK, "Search не должен вызываться при TopK > 20")
+}

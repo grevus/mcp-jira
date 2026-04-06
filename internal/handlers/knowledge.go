@@ -1,6 +1,9 @@
 package handlers
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Hit — один результат semantic-поиска. Дублирует форму store.Hit (Task 32),
 // чтобы handlers не зависел от RAG-пакетов на этапе Phase 5.
@@ -29,10 +32,18 @@ type SearchKnowledgeOutput struct {
 	Hits []Hit `json:"hits"`
 }
 
-// SearchKnowledge возвращает Handler. Валидация top_k — Task 25.
+// SearchKnowledge возвращает Handler с валидацией поля TopK (Task 25).
+// TopK <= 0 → default 5; 1–20 → as-is; > 20 → ошибка без вызова retriever.
 func SearchKnowledge(r KnowledgeRetriever) Handler[SearchKnowledgeInput, SearchKnowledgeOutput] {
 	return func(ctx context.Context, in SearchKnowledgeInput) (SearchKnowledgeOutput, error) {
-		hits, err := r.Search(ctx, in.ProjectKey, in.Query, in.TopK)
+		topK := in.TopK
+		if topK > 20 {
+			return SearchKnowledgeOutput{}, fmt.Errorf("search_jira_knowledge: top_k must be <= 20, got %d", topK)
+		}
+		if topK <= 0 {
+			topK = 5
+		}
+		hits, err := r.Search(ctx, in.ProjectKey, in.Query, topK)
 		if err != nil {
 			return SearchKnowledgeOutput{}, err
 		}
