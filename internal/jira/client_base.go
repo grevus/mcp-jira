@@ -50,3 +50,11 @@ func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader
 	}
 	return resp, nil
 }
+
+// checkStatus возвращает ошибку, если resp.StatusCode >= 400. Body НЕ закрывается.
+func checkStatus(resp *http.Response, method, path string) error {
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("jira: %s %s -> %d", method, path, resp.StatusCode)
+	}
+	return nil
+}

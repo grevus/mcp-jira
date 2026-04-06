@@ -66,6 +66,55 @@ func TestHTTPClient_DoTrimsBaseURLSlash(t *testing.T) {
 	resp.Body.Close()
 }
 
+func TestCheckStatus(t *testing.T) {
+	cases := []struct {
+		name      string
+		status    int
+		wantErr   bool
+		errContains []string
+	}{
+		{
+			name:    "200 OK — no error",
+			status:  http.StatusOK,
+			wantErr: false,
+		},
+		{
+			name:        "400 Bad Request — error",
+			status:      http.StatusBadRequest,
+			wantErr:     true,
+			errContains: []string{"GET", "/rest/api/3/search/jql", "400"},
+		},
+		{
+			name:        "599 — error",
+			status:      599,
+			wantErr:     true,
+			errContains: []string{"POST", "/rest/api/3/something", "599"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := &http.Response{StatusCode: tc.status}
+			var method, path string
+			switch tc.status {
+			case 599:
+				method, path = "POST", "/rest/api/3/something"
+			default:
+				method, path = "GET", "/rest/api/3/search/jql"
+			}
+			err := checkStatus(resp, method, path)
+			if tc.wantErr {
+				require.Error(t, err)
+				for _, want := range tc.errContains {
+					require.Contains(t, err.Error(), want)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestHTTPClient_DoNilHTTPClient(t *testing.T) {
 	// Работаем в package jira — видны unexported поля.
 	// Когда httpClient=nil, конструктор должен подставить http.DefaultClient.

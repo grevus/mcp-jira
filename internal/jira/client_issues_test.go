@@ -154,6 +154,40 @@ func TestListIssues_Filters(t *testing.T) {
 	}
 }
 
+func TestListIssues_Error401(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"errorMessages":["Unauthorized"]}`))
+	}))
+	defer srv.Close()
+
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	issues, err := client.ListIssues(context.Background(), ListIssuesParams{ProjectKey: "ABC"})
+	require.Error(t, err)
+	require.Nil(t, issues)
+	require.Contains(t, err.Error(), "GET")
+	require.Contains(t, err.Error(), "/rest/api/3/search/jql")
+	require.Contains(t, err.Error(), "401")
+}
+
+func TestListIssues_Error500(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"errorMessages":["Internal Server Error"]}`))
+	}))
+	defer srv.Close()
+
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	issues, err := client.ListIssues(context.Background(), ListIssuesParams{ProjectKey: "ABC"})
+	require.Error(t, err)
+	require.Nil(t, issues)
+	require.Contains(t, err.Error(), "GET")
+	require.Contains(t, err.Error(), "/rest/api/3/search/jql")
+	require.Contains(t, err.Error(), "500")
+}
+
 // parseQuery разбирает raw query string в map с URL-декодированием значений.
 func parseQuery(t *testing.T, raw string) map[string]string {
 	t.Helper()

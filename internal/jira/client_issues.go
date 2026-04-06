@@ -72,6 +72,10 @@ func (c *HTTPClient) ListIssues(ctx context.Context, p ListIssuesParams) ([]Issu
 	}
 	defer resp.Body.Close()
 
+	if err := checkStatus(resp, "GET", path); err != nil {
+		return nil, err
+	}
+
 	var sr searchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
 		return nil, fmt.Errorf("jira: ListIssues: decode response: %w", err)
