@@ -26,8 +26,50 @@ type docsSearchResponse struct {
 }
 
 type docsIssueResponse struct {
-	Key    string         `json:"key"`
-	Fields docsIssueFields `json:"fields"`
+	Key       string          `json:"key"`
+	Fields    docsIssueFields `json:"fields"`
+	Changelog *docsChangelog  `json:"changelog"`
+}
+
+// docsChangelog содержит историю изменений issue из Jira expand=changelog.
+type docsChangelog struct {
+	Histories []docsHistoryEntry `json:"histories"`
+}
+
+type docsHistoryEntry struct {
+	Created string             `json:"created"`
+	Items   []docsHistoryItem  `json:"items"`
+}
+
+type docsHistoryItem struct {
+	Field      string `json:"field"`
+	FromString string `json:"fromString"`
+	ToString   string `json:"toString"`
+}
+
+// extractStatusHistory парсит changelog и возвращает список строк
+// "YYYY-MM-DD: From → To" для каждой смены статуса в порядке Jira.
+// Записи с непарсируемой датой пропускаются. Если нет ни одной — возвращает nil.
+func extractStatusHistory(cl *docsChangelog) []string {
+	if cl == nil {
+		return nil
+	}
+	var result []string
+	for _, h := range cl.Histories {
+		t := parseUpdated(h.Created)
+		if t.IsZero() {
+			continue
+		}
+		for _, item := range h.Items {
+			if item.Field == "status" {
+				result = append(result, t.Format("2006-01-02")+": "+item.FromString+" \u2192 "+item.ToString)
+			}
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 type docsIssueFields struct {
@@ -143,6 +185,7 @@ func (c *HTTPClient) IterateIssueDocs(ctx context.Context, projectKey string) (<
 			q := url.Values{}
 			q.Set("jql", `project="`+projectKey+`"`)
 			q.Set("fields", "summary,status,assignee,description,issuelinks,updated")
+			q.Set("expand", "changelog")
 			q.Set("maxResults", "100")
 			if nextPageToken != "" {
 				q.Set("nextPageToken", nextPageToken)
@@ -183,14 +226,15 @@ func (c *HTTPClient) IterateIssueDocs(ctx context.Context, projectKey string) (<
 				}
 
 				doc := IssueDoc{
-					ProjectKey:  projectKey,
-					Key:         ir.Key,
-					Summary:     ir.Fields.Summary,
-					Status:      ir.Fields.Status.Name,
-					Assignee:    assignee,
-					Description: parseDescription(ir.Fields.Description),
-					Comments:    comments,
-					UpdatedAt:   parseUpdated(ir.Fields.Updated),
+					ProjectKey:    projectKey,
+					Key:           ir.Key,
+					Summary:       ir.Fields.Summary,
+					Status:        ir.Fields.Status.Name,
+					Assignee:      assignee,
+					Description:   parseDescription(ir.Fields.Description),
+					Comments:      comments,
+					StatusHistory: extractStatusHistory(ir.Changelog),
+					UpdatedAt:     parseUpdated(ir.Fields.Updated),
 				}
 
 				select {

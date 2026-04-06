@@ -259,6 +259,135 @@ func TestIterateIssueDocs_WithComments(t *testing.T) {
 	require.Empty(t, docs[1].Comments)
 }
 
+func TestExtractStatusHistory(t *testing.T) {
+	t.Run("nil changelog returns nil", func(t *testing.T) {
+		require.Nil(t, extractStatusHistory(nil))
+	})
+
+	t.Run("no status items returns nil", func(t *testing.T) {
+		cl := &docsChangelog{
+			Histories: []docsHistoryEntry{
+				{
+					Created: "2026-01-15T10:30:00.000+0000",
+					Items: []docsHistoryItem{
+						{Field: "summary", FromString: "Old", ToString: "New"},
+					},
+				},
+			},
+		}
+		require.Nil(t, extractStatusHistory(cl))
+	})
+
+	t.Run("status items are extracted correctly", func(t *testing.T) {
+		cl := &docsChangelog{
+			Histories: []docsHistoryEntry{
+				{
+					Created: "2026-01-15T10:30:00.000+0000",
+					Items: []docsHistoryItem{
+						{Field: "status", FromString: "To Do", ToString: "In Progress"},
+					},
+				},
+				{
+					Created: "2026-01-20T12:00:00.000+0000",
+					Items: []docsHistoryItem{
+						{Field: "summary", FromString: "Old", ToString: "New"},
+						{Field: "status", FromString: "In Progress", ToString: "Done"},
+					},
+				},
+			},
+		}
+		got := extractStatusHistory(cl)
+		require.Equal(t, []string{
+			"2026-01-15: To Do → In Progress",
+			"2026-01-20: In Progress → Done",
+		}, got)
+	})
+
+	t.Run("unparseable date is skipped", func(t *testing.T) {
+		cl := &docsChangelog{
+			Histories: []docsHistoryEntry{
+				{
+					Created: "not-a-date",
+					Items: []docsHistoryItem{
+						{Field: "status", FromString: "To Do", ToString: "In Progress"},
+					},
+				},
+				{
+					Created: "2026-01-20T12:00:00.000+0000",
+					Items: []docsHistoryItem{
+						{Field: "status", FromString: "In Progress", ToString: "Done"},
+					},
+				},
+			},
+		}
+		got := extractStatusHistory(cl)
+		require.Equal(t, []string{"2026-01-20: In Progress → Done"}, got)
+	})
+}
+
+func TestIterateIssueDocs_StatusHistory(t *testing.T) {
+	const fixtureWithChangelog = `{
+		"issues": [
+			{
+				"key": "ABC-1",
+				"fields": {
+					"summary": "First issue",
+					"status": {"name": "Done"},
+					"assignee": {"displayName": "Alice"},
+					"description": "lorem ipsum",
+					"updated": "2026-01-20T12:00:00.000+0000"
+				},
+				"changelog": {
+					"histories": [
+						{
+							"created": "2026-01-15T10:30:00.000+0000",
+							"items": [
+								{"field": "status", "fromString": "To Do", "toString": "In Progress"}
+							]
+						},
+						{
+							"created": "2026-01-20T12:00:00.000+0000",
+							"items": [
+								{"field": "summary", "fromString": "Old", "toString": "New"},
+								{"field": "status", "fromString": "In Progress", "toString": "Done"}
+							]
+						}
+					]
+				}
+			}
+		]
+	}`
+
+	var capturedURL string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/comment") {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"comments": []}`))
+			return
+		}
+		capturedURL = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(fixtureWithChangelog))
+	}))
+	defer srv.Close()
+
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
+
+	docs, err := collectDocs(t, out, errCh)
+	require.NoError(t, err)
+	require.Len(t, docs, 1)
+
+	require.Equal(t, []string{
+		"2026-01-15: To Do → In Progress",
+		"2026-01-20: In Progress → Done",
+	}, docs[0].StatusHistory)
+
+	require.Contains(t, capturedURL, "expand=changelog",
+		"request URL должен содержать expand=changelog")
+}
+
 func TestIterateIssueDocs_CommentsHTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
