@@ -84,6 +84,76 @@ func TestListIssues_InvalidProjectKey(t *testing.T) {
 	require.True(t, strings.Contains(err.Error(), "invalid project key"), "expected 'invalid project key' in error: %s", err)
 }
 
+func TestListIssues_Filters(t *testing.T) {
+	cases := []struct {
+		name           string
+		params         ListIssuesParams
+		wantJQLContains []string
+		wantMaxResults  string
+	}{
+		{
+			name:            "only status",
+			params:          ListIssuesParams{ProjectKey: "ABC", Status: "Done"},
+			wantJQLContains: []string{`project = "ABC"`, `status = "Done"`},
+			wantMaxResults:  "25",
+		},
+		{
+			name:            "only assignee",
+			params:          ListIssuesParams{ProjectKey: "ABC", Assignee: "Alice"},
+			wantJQLContains: []string{`project = "ABC"`, `assignee = "Alice"`},
+			wantMaxResults:  "25",
+		},
+		{
+			name:            "both status and assignee with limit=50",
+			params:          ListIssuesParams{ProjectKey: "ABC", Status: "In Progress", Assignee: "Bob", Limit: 50},
+			wantJQLContains: []string{`project = "ABC"`, `status = "In Progress"`, `assignee = "Bob"`},
+			wantMaxResults:  "50",
+		},
+		{
+			name:            "limit=0 defaults to 25",
+			params:          ListIssuesParams{ProjectKey: "ABC", Limit: 0},
+			wantJQLContains: []string{`project = "ABC"`},
+			wantMaxResults:  "25",
+		},
+		{
+			name:            "limit=200 clamped to 100",
+			params:          ListIssuesParams{ProjectKey: "ABC", Limit: 200},
+			wantJQLContains: []string{`project = "ABC"`},
+			wantMaxResults:  "100",
+		},
+		{
+			name:            "limit=-5 defaults to 25",
+			params:          ListIssuesParams{ProjectKey: "ABC", Limit: -5},
+			wantJQLContains: []string{`project = "ABC"`},
+			wantMaxResults:  "25",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var capturedQuery string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				capturedQuery = r.URL.RawQuery
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"issues":[]}`))
+			}))
+			defer srv.Close()
+
+			client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+			_, err := client.ListIssues(context.Background(), tc.params)
+			require.NoError(t, err)
+
+			queryMap := parseQuery(t, capturedQuery)
+
+			for _, want := range tc.wantJQLContains {
+				require.Contains(t, queryMap["jql"], want, "jql должен содержать %q", want)
+			}
+			require.Equal(t, tc.wantMaxResults, queryMap["maxResults"])
+		})
+	}
+}
+
 // parseQuery разбирает raw query string в map с URL-декодированием значений.
 func parseQuery(t *testing.T, raw string) map[string]string {
 	t.Helper()

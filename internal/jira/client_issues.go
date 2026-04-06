@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 )
 
 // searchResponse — приватный DTO для парсинга ответа /rest/api/3/search/jql.
@@ -31,19 +32,37 @@ type issueAssignee struct {
 	DisplayName string `json:"displayName"`
 }
 
+// resolveLimit нормализует значение Limit: <= 0 → 25, > 100 → 100.
+func resolveLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return 25
+	case limit > 100:
+		return 100
+	default:
+		return limit
+	}
+}
+
 // ListIssues возвращает список задач Jira для указанного проекта.
-// В этой версии всегда запрашивает maxResults=25.
+// Поддерживает опциональные фильтры Status, Assignee и Limit.
 func (c *HTTPClient) ListIssues(ctx context.Context, p ListIssuesParams) ([]Issue, error) {
 	if err := validateProjectKey(p.ProjectKey); err != nil {
 		return nil, fmt.Errorf("jira: ListIssues: %w", err)
 	}
 
 	jql := "project = " + quoteJQL(p.ProjectKey)
+	if p.Status != "" {
+		jql += ` AND status = ` + quoteJQL(p.Status)
+	}
+	if p.Assignee != "" {
+		jql += ` AND assignee = ` + quoteJQL(p.Assignee)
+	}
 
 	q := url.Values{}
 	q.Set("jql", jql)
 	q.Set("fields", "summary,status,assignee")
-	q.Set("maxResults", "25")
+	q.Set("maxResults", strconv.Itoa(resolveLimit(p.Limit)))
 
 	path := "/rest/api/3/search/jql?" + q.Encode()
 
