@@ -11,6 +11,7 @@ import (
 const openAIDefaultURL = "https://api.openai.com/v1/embeddings"
 const openAIModel = "text-embedding-3-small"
 const openAIDimension = 1024
+const openaiBatchSize = 100
 
 // OpenAIEmbedder реализует Embedder через OpenAI Embeddings API.
 type OpenAIEmbedder struct {
@@ -57,13 +58,34 @@ type openAIResponse struct {
 	Data []openAIEmbeddingItem `json:"data"`
 }
 
-// Embed выполняет один HTTP-запрос к OpenAI для заданных текстов.
-// Порядок результатов гарантирован через поле index из ответа.
+// Embed расщепляет texts на батчи по openaiBatchSize, выполняет N HTTP-запросов
+// и склеивает результаты в порядке оригинального ввода.
 func (e *OpenAIEmbedder) Embed(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return nil, nil
 	}
 
+	result := make([][]float32, 0, len(texts))
+	for i := 0; i < len(texts); i += openaiBatchSize {
+		end := i + openaiBatchSize
+		if end > len(texts) {
+			end = len(texts)
+		}
+		chunk := texts[i:end]
+
+		embeddings, err := e.embedBatch(ctx, chunk)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, embeddings...)
+	}
+
+	return result, nil
+}
+
+// embedBatch выполняет один HTTP-запрос к OpenAI для заданного chunk-а.
+// Порядок результатов гарантирован через поле index из ответа.
+func (e *OpenAIEmbedder) embedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	payload := openAIRequest{
 		Input:      texts,
 		Model:      openAIModel,
