@@ -51,9 +51,11 @@ type Config struct {
 	JiraAPIToken string
 	JiraAuthType string // "basic" (default) | "bearer" (Jira DC PAT)
 	DatabaseURL  string
-	RAGEmbedder  string // "voyage" или "openai"
+	RAGEmbedder  string // "voyage" | "openai" | "onnx"
 	VoyageAPIKey string
 	OpenAIAPIKey string
+	ONNXModelPath string // путь к директории с model.onnx (только для onnx)
+	ONNXLibDir    string // путь к директории с libonnxruntime (только для onnx, опционально)
 	MCPAPIKey    string // только для http
 	MCPAddr      string // только для http, default ":8080"
 }
@@ -96,11 +98,11 @@ func Load(mode Mode) (*Config, error) {
 	if embedder == "" {
 		embedder = "voyage"
 	}
-	if embedder != "voyage" && embedder != "openai" {
-		return nil, fmt.Errorf("config: RAG_EMBEDDER must be \"voyage\" or \"openai\", got %q", embedder)
+	if embedder != "voyage" && embedder != "openai" && embedder != "onnx" {
+		return nil, fmt.Errorf("config: RAG_EMBEDDER must be \"voyage\", \"openai\" or \"onnx\", got %q", embedder)
 	}
 
-	var voyageKey, openaiKey string
+	var voyageKey, openaiKey, onnxModelPath, onnxLibDir string
 	switch embedder {
 	case "voyage":
 		voyageKey = os.Getenv("VOYAGE_API_KEY")
@@ -112,6 +114,12 @@ func Load(mode Mode) (*Config, error) {
 		if openaiKey == "" {
 			return nil, fmt.Errorf("config: OPENAI_API_KEY is required when RAG_EMBEDDER=openai")
 		}
+	case "onnx":
+		onnxModelPath = os.Getenv("ONNX_MODEL_PATH")
+		if onnxModelPath == "" {
+			return nil, fmt.Errorf("config: ONNX_MODEL_PATH is required when RAG_EMBEDDER=onnx")
+		}
+		onnxLibDir = os.Getenv("ONNX_LIB_DIR") // опционально
 	}
 
 	var mcpAPIKey, mcpAddr string
@@ -127,16 +135,18 @@ func Load(mode Mode) (*Config, error) {
 	}
 
 	return &Config{
-		Mode:         mode,
-		JiraBaseURL:  values["JIRA_BASE_URL"],
-		JiraEmail:    values["JIRA_EMAIL"],
-		JiraAPIToken: values["JIRA_API_TOKEN"],
-		JiraAuthType: authType,
-		DatabaseURL:  values["DATABASE_URL"],
-		RAGEmbedder:  embedder,
-		VoyageAPIKey: voyageKey,
-		OpenAIAPIKey: openaiKey,
-		MCPAPIKey:    mcpAPIKey,
-		MCPAddr:      mcpAddr,
+		Mode:          mode,
+		JiraBaseURL:   values["JIRA_BASE_URL"],
+		JiraEmail:     values["JIRA_EMAIL"],
+		JiraAPIToken:  values["JIRA_API_TOKEN"],
+		JiraAuthType:  authType,
+		DatabaseURL:   values["DATABASE_URL"],
+		RAGEmbedder:   embedder,
+		VoyageAPIKey:  voyageKey,
+		OpenAIAPIKey:  openaiKey,
+		ONNXModelPath: onnxModelPath,
+		ONNXLibDir:    onnxLibDir,
+		MCPAPIKey:     mcpAPIKey,
+		MCPAddr:       mcpAddr,
 	}, nil
 }

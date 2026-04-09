@@ -31,7 +31,7 @@ func TestSprintHealthReport_HighRiskAndActions(t *testing.T) {
 			},
 		},
 	}
-	h := handlers.SprintHealthReport(f)
+	h := handlers.SprintHealthReport(f, nil)
 	out, err := h(context.Background(), handlers.SprintHealthReportInput{BoardID: 1})
 	require.NoError(t, err)
 	require.Equal(t, handlers.RiskHigh, out.RiskLevel)
@@ -46,14 +46,14 @@ func TestSprintHealthReport_LowRisk(t *testing.T) {
 			Health: jira.SprintHealth{Total: 10, Done: 7, InProgress: 3, Blocked: 0},
 		},
 	}
-	h := handlers.SprintHealthReport(f)
+	h := handlers.SprintHealthReport(f, nil)
 	out, err := h(context.Background(), handlers.SprintHealthReportInput{BoardID: 1})
 	require.NoError(t, err)
 	require.Equal(t, handlers.RiskLow, out.RiskLevel)
 }
 
 func TestSprintHealthReport_RejectsBadInput(t *testing.T) {
-	h := handlers.SprintHealthReport(&fakeSprintReporter{})
+	h := handlers.SprintHealthReport(&fakeSprintReporter{}, nil)
 	_, err := h(context.Background(), handlers.SprintHealthReportInput{BoardID: 0})
 	require.Error(t, err)
 }

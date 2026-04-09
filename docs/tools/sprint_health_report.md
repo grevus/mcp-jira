@@ -1,7 +1,7 @@
 # `sprint_health_report`
 
 **Stability:** beta  
-**Phase:** 1  
+**Phase:** 1 (scope changes: 2)  
 **Source:** `internal/handlers/sprint_report.go`
 
 ## Purpose
@@ -16,7 +16,7 @@
 ## When NOT to use
 
 - Нужны просто базовые counters → `get_sprint_health`.
-- Нужны scope changes (added/removed) — пока не реализовано (phase 2, анализ changelog).
+- Если нужны детальные changelog-движения scope (кто и когда менял) — tool возвращает только ключи, не историю.
 
 ## Input
 
@@ -31,10 +31,12 @@
 |---|---|---|
 | `report.health` | `SprintHealth` | Totals, done, in_progress, blocked, velocity |
 | `report.blocked_issues` | `[]Issue` | Разобранные blocked задачи |
-| `report.scope_added` / `scope_removed` | `[]Issue` | **пустые** (phase 2) |
+| `report.scope_added` / `scope_removed` | `[]Issue` | устарело: всегда пустые — см. поля `scope_added` / `scope_removed` на верхнем уровне |
 | `summary` | string | Человекочитаемое описание |
 | `risk_level` | `"low"` / `"medium"` / `"high"` | >20% blocked → high; >10% → medium |
 | `action_items` | []string | Текст "Unblock KEY: summary" на каждую blocked |
+| `scope_added` | []string | Ключи задач, добавленных в спринт после старта (phase 2, `expand=changelog`) |
+| `scope_removed` | []string | Ключи задач, удалённых из спринта после старта |
 
 ## Example
 
@@ -62,5 +64,5 @@
 
 ## Known limitations
 
-- Scope changes (added/removed) не считаются — требует `expand=changelog` и анализа истории полей.
+- Scope changes считаются только если передан явный `sprint_id` > 0 и токен имеет доступ к `expand=changelog`; ошибки чтения changelog не валят handler — поля остаются пустыми.
 - `story points` берутся из `customfield_10016` (дефолт Jira Cloud); для других инстансов нужно параметризовать.

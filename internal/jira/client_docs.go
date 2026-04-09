@@ -157,10 +157,10 @@ func parseDescription(raw json.RawMessage) string {
 	return parseTextOrADF(raw)
 }
 
-// fetchIssueComments выполняет GET /rest/api/3/issue/{key}/comment и возвращает
+// GetIssueComments выполняет GET /rest/api/3/issue/{key}/comment и возвращает
 // плоский список текстов комментариев. Если комментариев нет — nil.
 // При ошибке HTTP или декодирования возвращает ошибку.
-func (c *HTTPClient) fetchIssueComments(ctx context.Context, issueKey string) ([]string, error) {
+func (c *HTTPClient) GetIssueComments(ctx context.Context, issueKey string) ([]string, error) {
 	path := "/rest/api/3/issue/" + issueKey + "/comment"
 	resp, err := c.do(ctx, "GET", path, nil)
 	if err != nil {
@@ -174,7 +174,7 @@ func (c *HTTPClient) fetchIssueComments(ctx context.Context, issueKey string) ([
 	var cr commentsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&cr); err != nil {
 		resp.Body.Close()
-		return nil, fmt.Errorf("jira: fetchIssueComments: decode response: %w", err)
+		return nil, fmt.Errorf("jira: GetIssueComments: decode response: %w", err)
 	}
 	resp.Body.Close()
 
@@ -254,7 +254,7 @@ func (c *HTTPClient) IterateIssueDocs(ctx context.Context, projectKey string) (<
 					assignee = ir.Fields.Assignee.DisplayName
 				}
 
-				comments, err := c.fetchIssueComments(ctx, ir.Key)
+				comments, err := c.GetIssueComments(ctx, ir.Key)
 				if err != nil {
 					errCh <- fmt.Errorf("jira: IterateIssueDocs: fetch comments for %s: %w", ir.Key, err)
 					return

@@ -70,6 +70,12 @@ func runIndex(ctx context.Context, args []string) {
 	switch cfg.RAGEmbedder {
 	case "openai":
 		emb = embed.NewOpenAIEmbedder(cfg.OpenAIAPIKey, nil)
+	case "onnx":
+		onnxEmb, err := embed.NewONNXEmbedder(cfg.ONNXModelPath, cfg.ONNXLibDir)
+		if err != nil {
+			log.Fatalf("onnx embedder: %v", err)
+		}
+		emb = onnxEmb
 	default: // "voyage"
 		emb = embed.NewVoyageEmbedder(cfg.VoyageAPIKey, nil)
 	}

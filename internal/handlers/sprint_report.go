@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/grevus/mcp-jira/internal/jira"
 )
@@ -10,6 +11,12 @@ import (
 // SprintReporter — узкий интерфейс для sprint_health_report.
 type SprintReporter interface {
 	GetSprintReport(ctx context.Context, boardID, sprintID int) (jira.SprintReport, error)
+}
+
+// ScopeReader — узкий интерфейс для чтения scope changes спринта через changelog.
+// *jira.HTTPClient реализует его через GetSprintScopeChanges.
+type ScopeReader interface {
+	GetSprintScopeChanges(ctx context.Context, sprintID int) (added, removed []string, err error)
 }
 
 // SprintHealthReportInput — параметры MCP tool sprint_health_report.
@@ -30,14 +37,21 @@ const (
 
 // SprintHealthReportOutput — детерминированный человекочитаемый отчёт.
 type SprintHealthReportOutput struct {
-	Report      jira.SprintReport `json:"report"`
-	Summary     string            `json:"summary"`
-	RiskLevel   RiskLevel         `json:"risk_level"`
-	ActionItems []string          `json:"action_items"`
+	Report       jira.SprintReport `json:"report"`
+	Summary      string            `json:"summary"`
+	RiskLevel    RiskLevel         `json:"risk_level"`
+	ActionItems  []string          `json:"action_items"`
+	ScopeAdded   []string          `json:"scope_added"`
+	ScopeRemoved []string          `json:"scope_removed"`
 }
 
 // SprintHealthReport — handler для sprint_health_report tool.
-func SprintHealthReport(r SprintReporter) Handler[SprintHealthReportInput, SprintHealthReportOutput] {
+// sr — источник scope changes (changelog). Может быть nil — тогда scope поля
+// остаются пустыми слайсами. Ошибка получения scope не валит handler: она
+// пишется в stderr через log, а scope возвращается пустым. Такое поведение
+// обеспечивает обратную совместимость, если Jira не выдаёт expand=changelog
+// или используется токен без permission.
+func SprintHealthReport(r SprintReporter, sr ScopeReader) Handler[SprintHealthReportInput, SprintHealthReportOutput] {
 	return func(ctx context.Context, in SprintHealthReportInput) (SprintHealthReportOutput, error) {
 		if in.BoardID <= 0 {
 			return SprintHealthReportOutput{}, fmt.Errorf("sprint_health_report: board_id is required")
@@ -59,11 +73,29 @@ func SprintHealthReport(r SprintReporter) Handler[SprintHealthReportInput, Sprin
 			actions = append(actions, fmt.Sprintf("Unblock %s: %s", b.Key, b.Summary))
 		}
 
+		scopeAdded := []string{}
+		scopeRemoved := []string{}
+		if sr != nil && in.SprintID > 0 {
+			added, removed, scopeErr := sr.GetSprintScopeChanges(ctx, in.SprintID)
+			if scopeErr != nil {
+				log.Printf("sprint_health_report: scope changes unavailable for sprint %d: %v", in.SprintID, scopeErr)
+			} else {
+				if added != nil {
+					scopeAdded = added
+				}
+				if removed != nil {
+					scopeRemoved = removed
+				}
+			}
+		}
+
 		return SprintHealthReportOutput{
-			Report:      rep,
-			Summary:     summary,
-			RiskLevel:   risk,
-			ActionItems: actions,
+			Report:       rep,
+			Summary:      summary,
+			RiskLevel:    risk,
+			ActionItems:  actions,
+			ScopeAdded:   scopeAdded,
+			ScopeRemoved: scopeRemoved,
 		}, nil
 	}
 }

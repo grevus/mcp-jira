@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-MVP реализован по плану `docs/superpowers/plans/2026-04-07-core-mvp-small-tasks.md` (ветка `feat/core-mvp`). Phase 1 (3 новых tool: `similar_issues`, `sprint_health_report`, `standup_digest`) реализована поверх текущего стека без новых источников данных. Phase 2/3 — запланированы (см. spec §2). Архитектура зафиксирована в `docs/superpowers/specs/2026-04-06-mcp-jira-design.md`. **Перед любыми изменениями читай spec — он source of truth.**
+MVP реализован по плану `docs/superpowers/plans/2026-04-07-core-mvp-small-tasks.md`. Phase 1 (3 tool: `similar_issues`, `sprint_health_report`, `standup_digest`) и Phase 2 (4 tool: `engineering_qa`, `incident_context`, `ticket_triage`, `release_risk_check` + закрытие долга по `scope_added/scope_removed` в `sprint_health_report` через `expand=changelog`) реализованы поверх Jira-only RAG без новых источников данных. Phase 3 (Confluence-коннектор) — запланирована (см. spec §2). Архитектура зафиксирована в `docs/superpowers/specs/2026-04-06-mcp-jira-design.md`. **Перед любыми изменениями читай spec — он source of truth.**
 
 ## Goal
 
-Нишевый MCP-сервер на Go, дающий LLM-клиентам набор tools поверх Jira. MVP покрывает 3 tool, Phase 1 расширяет до 6 (реализовано), Phase 2/3 — до 13 (запланировано, см. spec §2).
+Нишевый MCP-сервер на Go, дающий LLM-клиентам набор tools поверх Jira. MVP покрывает 3 tool, Phase 1 расширяет до 6, Phase 2 — до 10 (реализовано). Phase 3 (+3 tool поверх Confluence) — запланирован (см. spec §2).
 
 **MVP (stable):**
 - `list_issues` — JQL-поиск через `/rest/api/3/search/jql`.
@@ -20,7 +20,13 @@ MVP реализован по плану `docs/superpowers/plans/2026-04-07-core
 - `sprint_health_report` — расширенный sprint-отчёт: risk level, blocked, action items.
 - `standup_digest` — группировка движений по статусам за временной диапазон.
 
-**Phase 2/3 (запланировано):** `incident_context`, `engineering_qa`, `ticket_triage`, `release_risk_check`, `runbook_for_signal`, `onboarding_path`, `policy_guardrail_check`. Phase 2 работает на текущем Jira-only RAG; Phase 3 — после Confluence-коннектора.
+**Phase 2 (beta, реализовано):**
+- `engineering_qa` — QA поверх RAG-индекса; цитаты = hits.
+- `incident_context` — контекст инцидента: похожие, suspected_causes, recommended_checks из комментариев.
+- `ticket_triage` — suggested_team по assignee-частоте в похожих, priority по keyword-эвристике.
+- `release_risk_check` — риск релиза по `fixVersion` + семантический поиск постмортемов.
+
+**Phase 3 (запланировано):** `runbook_for_signal`, `onboarding_path`, `policy_guardrail_check` — после Confluence-коннектора.
 
 Канонические контракты tools — `docs/tools/` (per-tool md + индекс). Description в `internal/register/register.go` и в md-файле должны совпадать.
 

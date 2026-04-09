@@ -25,6 +25,14 @@ func (f *fakeJira) GetIssue(_ context.Context, key string) (jira.Issue, string, 
 	return jira.Issue{Key: key, Summary: "Stub issue"}, "stub description", nil
 }
 
+func (f *fakeJira) GetSprintScopeChanges(_ context.Context, _ int) ([]string, []string, error) {
+	return nil, nil, nil
+}
+
+func (f *fakeJira) GetIssueComments(_ context.Context, _ string) ([]string, error) {
+	return nil, nil
+}
+
 func (f *fakeJira) GetSprintReport(_ context.Context, boardID, _ int) (jira.SprintReport, error) {
 	return jira.SprintReport{
 		Health:        jira.SprintHealth{BoardID: boardID, SprintName: "Sprint 1", Total: 5, Done: 2},
