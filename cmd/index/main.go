@@ -24,6 +24,8 @@ func main() {
 		os.Exit(2)
 	}
 
+	config.LoadDotEnv(".env")
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -62,7 +64,7 @@ func runIndex(ctx context.Context, args []string) {
 		log.Fatalf("config: %v", err)
 	}
 
-	jc := jira.NewHTTPClient(cfg.JiraBaseURL, cfg.JiraEmail, cfg.JiraAPIToken, nil)
+	jc := jira.NewHTTPClient(cfg.JiraBaseURL, cfg.JiraEmail, cfg.JiraAPIToken, cfg.JiraAuthType, nil)
 
 	var emb embed.Embedder
 	switch cfg.RAGEmbedder {

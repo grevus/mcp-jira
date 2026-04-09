@@ -4,14 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-MVP реализован по плану `docs/superpowers/plans/2026-04-07-core-mvp-small-tasks.md`, см. ветку `feat/core-mvp`. Архитектура зафиксирована в `docs/superpowers/specs/2026-04-06-mcp-jira-design.md`. **Перед любыми изменениями читай spec — он source of truth.**
+MVP реализован по плану `docs/superpowers/plans/2026-04-07-core-mvp-small-tasks.md` (ветка `feat/core-mvp`). Phase 1 (3 новых tool: `similar_issues`, `sprint_health_report`, `standup_digest`) реализована поверх текущего стека без новых источников данных. Phase 2/3 — запланированы (см. spec §2). Архитектура зафиксирована в `docs/superpowers/specs/2026-04-06-mcp-jira-design.md`. **Перед любыми изменениями читай spec — он source of truth.**
 
 ## Goal
 
-Нишевый MCP-сервер на Go, дающий LLM-клиентам три tools поверх Jira:
+Нишевый MCP-сервер на Go, дающий LLM-клиентам набор tools поверх Jira. MVP покрывает 3 tool, Phase 1 расширяет до 6 (реализовано), Phase 2/3 — до 13 (запланировано, см. spec §2).
+
+**MVP (stable):**
 - `list_issues` — JQL-поиск через `/rest/api/3/search/jql`.
 - `get_sprint_health` — агрегат активного спринта (Jira Software / Agile API).
 - `search_jira_knowledge` — семантический поиск по индексированным issue (RAG).
+
+**Phase 1 (beta, реализовано):**
+- `similar_issues` — RAG-поиск похожих задач от заданной issue.
+- `sprint_health_report` — расширенный sprint-отчёт: risk level, blocked, action items.
+- `standup_digest` — группировка движений по статусам за временной диапазон.
+
+**Phase 2/3 (запланировано):** `incident_context`, `engineering_qa`, `ticket_triage`, `release_risk_check`, `runbook_for_signal`, `onboarding_path`, `policy_guardrail_check`. Phase 2 работает на текущем Jira-only RAG; Phase 3 — после Confluence-коннектора.
+
+Канонические контракты tools — `docs/tools/` (per-tool md + индекс). Description в `internal/register/register.go` и в md-файле должны совпадать.
 
 Транспорты: stdio (Claude Desktop/Cursor) и Streamable HTTP `/mcp` под API-ключом (Claude Web и т.п.).
 
@@ -36,8 +47,8 @@ cmd/server/main.go            stdio | streamable-http (Echo)
 cmd/index/main.go             migrate | index --project=ABC
   └─ internal/register        ЕДИНСТВЕННЫЙ импортёр go-sdk/mcp; adapt[In,Out] + Register
        └─ internal/handlers   Handler[In,Out] func(ctx, In) (Out, error); НЕ знает про mcp/echo
-            └─ узкие интерфейсы (IssueLister, SprintReader, KnowledgeRetriever)
-                 ├─ internal/jira (HTTPClient: ListIssues, GetSprintHealth, IterateIssueDocs)
+            └─ узкие интерфейсы (IssueLister, IssueFetcher, SprintReader, SprintReporter, KnowledgeRetriever)
+                 ├─ internal/jira (HTTPClient: ListIssues, GetIssue, GetSprintHealth, GetSprintReport, IterateIssueDocs)
                  └─ internal/rag/retriever (Embedder + Store)
                       ├─ internal/rag/embed (Voyage, OpenAI)
                       ├─ internal/rag/store (PgvectorStore + миграции)
@@ -78,15 +89,17 @@ go test -tags=integration ./...               # + pgvector через testcontai
 2. Файл `internal/handlers/<thing>.go`: `Input`, `Output`, узкий интерфейс, функция-конструктор `Handler[In,Out]`.
 3. Тест с fake-реализацией узкого интерфейса.
 4. Одна строка в `internal/register/register.go`: `mcp.AddTool(srv, &mcp.Tool{Name: "..."}, adapt(handlers.Foo(jc)))`.
+5. `docs/tools/<name>.md` по шаблону `docs/tools/_template.md` + строка в `docs/tools/README.md`. Description в `register.go` и в md должны совпадать.
 
 Никакого plugin/registry/DI container — намеренный отказ.
 
 ## Out of scope
 
-Не добавляй без отдельного плана: Postgres-хранилище API-ключей (multi-tenant), Stripe billing, продакшн Docker/деплой, Prometheus, инкрементальная индексация, фоновый scheduler в сервере, Jira webhooks, retry на 429, hybrid search, чанкинг, live reload индекса, third embedder.
+Не добавляй без отдельного плана: Postgres-хранилище API-ключей (multi-tenant), Stripe billing, продакшн Docker/деплой, Prometheus, инкрементальная индексация, фоновый scheduler в сервере, Jira webhooks, retry на 429, hybrid search, чанкинг, live reload индекса, third embedder. Отдельно: **Confluence-коннектор** (Phase 3 в spec §2), **scope changes в `sprint_health_report`** (анализ changelog — Phase 2), **LLM-генерация внутри handlers** (все тексты детерминированные).
 
 ## Docs
 
 - **`docs/superpowers/specs/2026-04-06-mcp-jira-design.md`** — source of truth по архитектуре. Читай это перед любыми правками.
+- **`docs/tools/`** — канонические контракты MCP tools (per-tool md + индекс). Правь вместе с `internal/register/register.go`.
 - `docs/superpowers/plans/2026-04-06-core-mvp.md` — исходный план реализации (историческая версия).
 - `docs/superpowers/plans/2026-04-07-core-mvp-small-tasks.md` — актуальный план мелких таск (использовался при MVP-реализации).

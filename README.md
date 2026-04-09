@@ -33,11 +33,12 @@ bin/mcp-jira --transport=http
 | Variable | Required for | Default | Description |
 |---|---|---|---|
 | `JIRA_BASE_URL` | stdio, http, index | — | Базовый URL Jira, например `https://you.atlassian.net` |
-| `JIRA_EMAIL` | stdio, http, index | — | Email учётной записи Jira |
-| `JIRA_API_TOKEN` | stdio, http, index | — | API-токен Jira (Basic Auth) |
+| `JIRA_EMAIL` | stdio, http, index (только `basic`) | — | Email учётной записи Jira (не нужен для `bearer`) |
+| `JIRA_API_TOKEN` | stdio, http, index | — | API-токен Jira (Basic Auth) или PAT (Bearer) |
+| `JIRA_AUTH_TYPE` | — | `basic` | Тип аутентификации: `basic` (Jira Cloud) или `bearer` (Jira Data Center PAT) |
 | `DATABASE_URL` | stdio, http, index | — | DSN Postgres, например `postgres://mcp:mcp@localhost:5432/mcp?sslmode=disable` |
 | `RAG_EMBEDDER` | — | `voyage` | Выбор embedder: `voyage` или `openai` |
-| `VOYAGE_API_KEY` | stdio, http, index (если `RAG_EMBEDDER=voyage`) | — | API-ключ Voyage AI |
+| `VOYAGE_API_KEY` | stdio, http, index (если `RAG_EMBEDDER=voyage`) | — | API-ключ Voyage AI. **Примечание:** `api.voyageai.com` недоступен из России без VPN |
 | `OPENAI_API_KEY` | stdio, http, index (если `RAG_EMBEDDER=openai`) | — | API-ключ OpenAI |
 | `MCP_API_KEY` | **только http** | — | Статический ключ для авторизации HTTP-запросов к `/mcp` |
 | `MCP_ADDR` | http | `:8080` | Адрес и порт HTTP-сервера |

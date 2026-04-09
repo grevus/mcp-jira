@@ -14,7 +14,7 @@
 
 ## 2. Scope
 
-### В scope MVP
+### В scope MVP (Phase 0)
 
 - **Tools (3):**
   - `list_issues(project_key, status?, assigned_to?, limit?)` — JQL-поиск через `/rest/api/3/search/jql`.
@@ -24,6 +24,31 @@
 - **RAG:** Postgres + pgvector, embeddings от Voyage AI (default) или OpenAI (fallback). Полная (не инкрементальная) индексация через CLI. Контент документа — `summary + description + все комментарии + история статусов + linked issues`.
 - **Auth для HTTP:** статический API-ключ из env, constant-time сравнение.
 - **Два бинаря:** `mcp-jira` (сервер) и `mcp-jira-index` (CLI индексатор + миграции).
+
+### Phase 1 — дополнительные tools без новых источников (реализовано)
+
+Расширяют набор до 6 инструментов, не требуя ничего, кроме уже имеющихся Jira REST/Agile API и pgvector-индекса.
+
+- `similar_issues(project_key, issue_key, top_k?)` — RAG-поиск похожих задач с фильтрацией self-match. Использует новый `GetIssue` в `internal/jira` и переиспользует `KnowledgeRetriever`.
+- `sprint_health_report(board_id, sprint_id?)` — расширенный sprint-отчёт: агрегаты, список blocked задач, детерминированный `risk_level` (правило по доле blocked), шаблонный `summary`, `action_items`. `scope_added`/`scope_removed` — пустые (требуется анализ changelog, phase 2).
+- `standup_digest(team_key, from, to, limit?)` — группирует движения по статусам для async standup. Использует расширенный `ListIssuesParams` (поля `UpdatedFrom`/`UpdatedTo`/`FixVersion`).
+
+Канонические контракты — в `docs/tools/` (`README.md` + per-tool md). При изменении description в `internal/register/register.go` синхронизируется соответствующий md.
+
+### Phase 2 — частичное покрытие через Jira-only RAG (запланировано)
+
+Работает поверх текущего pgvector-индекса (только Jira issues); для части полей осознанно оставлены TODO до Phase 3.
+
+- `incident_context(issue_key)` — related incidents (через `similar_issues`), `suspected_causes`/`recommended_checks` детерминированно из топ-N комментариев; `docs_links` пустой до Confluence.
+- `engineering_qa(question, context_hint?)` — QA поверх `KnowledgeRetriever`; citations = hits. Feature flag `RAG_DOCS_ENABLED=false`.
+- `ticket_triage(issue_key)` — suggested team по частоте assignee в похожих; priority heuristic по ключевым словам.
+- `release_risk_check(fix_version, services_involved)` — JQL `fixVersion = X` (поддержка уже добавлена в phase 1) + semantic поиск postmortems; `missing_runbooks` = пустой (phase 3).
+
+### Phase 3 — новые источники данных (запланировано)
+
+Требует отдельного плана и новых пакетов: `internal/docs/` (абстракция `DocStore`), `internal/docs/confluence/` (коннектор), расширение `internal/rag/index` до `DocIndexer` + таблицы `doc_chunks`, подкоманды `bin/mcp-jira-index docs`. Env: `CONFLUENCE_BASE_URL`, `CONFLUENCE_SPACES`.
+
+Разблокирует: `runbook_for_signal`, `onboarding_path`, `policy_guardrail_check`.
 
 ### Out of scope (отдельные планы)
 
@@ -38,6 +63,8 @@
 - Чанкинг длинных issue (пока считаем `один issue = один документ`).
 - Live reload индекса в работающем сервере (после индексации — рестарт).
 - Листинги на маркетплейсах, landing page.
+- **Scope changes** (added/removed) в `sprint_health_report` — требует `expand=changelog` и парсинга истории полей; оставлено на phase 2.
+- **LLM-генерация summaries внутри handlers** — все тексты (summary, action_items) строятся детерминированно из шаблонов; LLM-обвязка остаётся на клиенте MCP.
 
 ## 3. Архитектурные решения и обоснования
 
@@ -208,10 +235,13 @@ docs/
 
 ```go
 type ListIssuesParams struct {
-    ProjectKey string
-    Status     string
-    Assignee   string
-    Limit      int    // default 25, max 100
+    ProjectKey  string
+    Status      string
+    Assignee    string
+    FixVersion  string // phase 1: для release_risk_check; подставляется в JQL `fixVersion = "..."`
+    UpdatedFrom string // phase 1: "YYYY-MM-DD[ HH:MM]"; для standup_digest
+    UpdatedTo   string
+    Limit       int    // default 25, max 100
 }
 
 type Issue struct {
@@ -231,6 +261,15 @@ type SprintHealth struct {
     Velocity   float64 `json:"velocity"`
 }
 
+// Phase 1: расширенный отчёт для sprint_health_report.
+// ScopeAdded/ScopeRemoved заполняются в phase 2 (expand=changelog).
+type SprintReport struct {
+    Health        SprintHealth `json:"health"`
+    BlockedIssues []Issue      `json:"blocked_issues"`
+    ScopeAdded    []Issue      `json:"scope_added"`
+    ScopeRemoved  []Issue      `json:"scope_removed"`
+}
+
 type IssueDoc struct {
     ProjectKey    string
     Key           string
@@ -247,14 +286,18 @@ type IssueDoc struct {
 type HTTPClient struct { /* baseURL, basic auth, *http.Client */ }
 
 func (c *HTTPClient) ListIssues(ctx, ListIssuesParams) ([]Issue, error)
+func (c *HTTPClient) GetIssue(ctx, key string) (Issue, string, error)             // phase 1: +description
 func (c *HTTPClient) GetSprintHealth(ctx, boardID int) (SprintHealth, error)
+func (c *HTTPClient) GetSprintReport(ctx, boardID, sprintID int) (SprintReport, error) // phase 1; sprintID<=0 → активный
 func (c *HTTPClient) IterateIssueDocs(ctx, projectKey string) (<-chan IssueDoc, <-chan error)
 ```
 
 **Endpoint contract:**
 
-- `ListIssues` → `GET /rest/api/3/search/jql?jql=...&fields=summary,status,assignee&maxResults=N` (новый, не deprecated).
-- `GetSprintHealth` → `GET /rest/agile/1.0/board/{id}/sprint?state=active` + `GET /rest/agile/1.0/sprint/{sprintId}/issue?fields=status`.
+- `ListIssues` → `GET /rest/api/3/search/jql?jql=...&fields=summary,status,assignee&maxResults=N` (новый, не deprecated). В phase 1 JQL дополняется `fixVersion=...`, `updated >= ...`, `updated <= ...` с валидацией дат (`validateJQLDate`).
+- `GetIssue` → `GET /rest/api/3/issue/{key}?fields=summary,status,assignee,description`. Ключ проходит whitelist-валидацию `^[A-Z][A-Z0-9_]*-\d+$`.
+- `GetSprintHealth` → `GET /rest/agile/1.0/board/{id}/sprint?state=active` + `GET /rest/agile/1.0/sprint/{sprintId}/issue?fields=summary,status,assignee,customfield_10016`.
+- `GetSprintReport` → тот же набор; если `sprintID<=0`, сначала получаем активный. Blocked issues собираются фильтрацией по `status.name contains "block"`.
 - `IterateIssueDocs` → пагинированный обход `GET /rest/api/3/search/jql?jql=project=KEY&fields=summary,status,assignee,description,issuelinks,updated&expand=changelog&maxResults=100&nextPageToken=...` + per-issue `GET /rest/api/3/issue/{key}/comment`.
 
 **JQL escaping:** `jql.go` содержит `quoteJQL(s string) string`, экранирующий `\` → `\\` и `"` → `\"`, оборачивающий результат в двойные кавычки. Юнит-тесты на: пустую строку, строку с кавычкой, строку с бэкслэшем, обычный ключ проекта.
@@ -491,8 +534,11 @@ bin/mcp-jira --transport=http           # для Claude Web и т.п.
    ```go
    mcp.AddTool(srv, &mcp.Tool{Name: "get_worklogs", Description: "..."}, adapt(handlers.Worklogs(jc)))
    ```
+5. **Документация в `docs/tools/<thing>.md`** по шаблону `docs/tools/_template.md` + строка в `docs/tools/README.md`. Description в `register.go` и в md-файле должны совпадать — это канонический контракт для клиентов MCP.
 
 Никакой плагин-системы, registry, dependency injection container — это намеренный отказ.
+
+**Source of truth для контрактов tools:** `docs/tools/` (каталог + per-tool md).
 
 ## 11. Известные ограничения и долги
 

@@ -9,25 +9,32 @@ import (
 )
 
 // HTTPClient — базовый HTTP-клиент для Jira REST API.
-// Все методы добавляют basic auth и Accept: application/json.
+// Все методы добавляют auth header и Accept: application/json.
+// authType "basic" — Basic Auth (email:token), "bearer" — Bearer PAT (Jira DC).
 type HTTPClient struct {
-	baseURL string // https://you.atlassian.net (без trailing slash)
-	email   string
-	token   string
-	http    *http.Client
+	baseURL  string // https://you.atlassian.net (без trailing slash)
+	email    string
+	token    string
+	authType string // "basic" | "bearer"
+	http     *http.Client
 }
 
 // NewHTTPClient создаёт HTTPClient. Если httpClient == nil, используется http.DefaultClient.
 // trailing slash в baseURL убирается автоматически.
-func NewHTTPClient(baseURL, email, token string, httpClient *http.Client) *HTTPClient {
+// authType: "basic" (Jira Cloud, Basic Auth email:token) или "bearer" (Jira DC, PAT).
+func NewHTTPClient(baseURL, email, token, authType string, httpClient *http.Client) *HTTPClient {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
+	if authType == "" {
+		authType = "basic"
+	}
 	return &HTTPClient{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		email:   email,
-		token:   token,
-		http:    httpClient,
+		baseURL:  strings.TrimRight(baseURL, "/"),
+		email:    email,
+		token:    token,
+		authType: authType,
+		http:     httpClient,
 	}
 }
 
@@ -41,7 +48,11 @@ func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader
 	if err != nil {
 		return nil, fmt.Errorf("jira: build request: %w", err)
 	}
-	req.SetBasicAuth(c.email, c.token)
+	if c.authType == "bearer" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	} else {
+		req.SetBasicAuth(c.email, c.token)
+	}
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.http.Do(req)

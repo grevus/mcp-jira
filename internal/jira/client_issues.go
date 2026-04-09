@@ -5,8 +5,68 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 )
+
+var issueKeyRe = regexp.MustCompile(`^[A-Z][A-Z0-9_]*-\d+$`)
+
+// validateIssueKey — whitelist для issue key ("ABC-123"), чтобы не прокидывать
+// произвольные строки в URL.
+func validateIssueKey(s string) error {
+	if !issueKeyRe.MatchString(s) {
+		return fmt.Errorf("jira: invalid issue key %q", s)
+	}
+	return nil
+}
+
+// getIssueResponse — DTO для /rest/api/3/issue/{key}.
+type getIssueResponse struct {
+	Key    string             `json:"key"`
+	Fields getIssueRespFields `json:"fields"`
+}
+
+type getIssueRespFields struct {
+	Summary     string         `json:"summary"`
+	Status      issueStatus    `json:"status"`
+	Assignee    *issueAssignee `json:"assignee"`
+	Description string         `json:"description"` // при fields=summary,status,assignee,description приходит plain text в v3 только если expand. Оставляем best-effort.
+}
+
+// GetIssue возвращает одну задачу Jira по ключу и её описание.
+// Используется в similar_issues и ticket_triage handlers.
+func (c *HTTPClient) GetIssue(ctx context.Context, key string) (Issue, string, error) {
+	if err := validateIssueKey(key); err != nil {
+		return Issue{}, "", fmt.Errorf("jira: GetIssue: %w", err)
+	}
+
+	path := "/rest/api/3/issue/" + key + "?fields=summary,status,assignee,description"
+	resp, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return Issue{}, "", err
+	}
+	defer resp.Body.Close()
+
+	if err := checkStatus(resp, "GET", path); err != nil {
+		return Issue{}, "", err
+	}
+
+	var ir getIssueResponse
+	if err := json.NewDecoder(resp.Body).Decode(&ir); err != nil {
+		return Issue{}, "", fmt.Errorf("jira: GetIssue: decode response: %w", err)
+	}
+
+	assignee := ""
+	if ir.Fields.Assignee != nil {
+		assignee = ir.Fields.Assignee.DisplayName
+	}
+	return Issue{
+		Key:      ir.Key,
+		Summary:  ir.Fields.Summary,
+		Status:   ir.Fields.Status.Name,
+		Assignee: assignee,
+	}, ir.Fields.Description, nil
+}
 
 // searchResponse — приватный DTO для парсинга ответа /rest/api/3/search/jql.
 type searchResponse struct {
@@ -57,6 +117,21 @@ func (c *HTTPClient) ListIssues(ctx context.Context, p ListIssuesParams) ([]Issu
 	}
 	if p.Assignee != "" {
 		jql += ` AND assignee = ` + quoteJQL(p.Assignee)
+	}
+	if p.FixVersion != "" {
+		jql += ` AND fixVersion = ` + quoteJQL(p.FixVersion)
+	}
+	if p.UpdatedFrom != "" {
+		if err := validateJQLDate(p.UpdatedFrom); err != nil {
+			return nil, fmt.Errorf("jira: ListIssues: UpdatedFrom: %w", err)
+		}
+		jql += ` AND updated >= ` + quoteJQL(p.UpdatedFrom)
+	}
+	if p.UpdatedTo != "" {
+		if err := validateJQLDate(p.UpdatedTo); err != nil {
+			return nil, fmt.Errorf("jira: ListIssues: UpdatedTo: %w", err)
+		}
+		jql += ` AND updated <= ` + quoteJQL(p.UpdatedTo)
 	}
 
 	q := url.Values{}

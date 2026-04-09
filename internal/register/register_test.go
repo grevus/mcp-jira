@@ -21,6 +21,19 @@ func (f *fakeJira) GetSprintHealth(_ context.Context, _ int) (jira.SprintHealth,
 	return jira.SprintHealth{SprintName: "Sprint 1", Total: 5, Done: 2}, nil
 }
 
+func (f *fakeJira) GetIssue(_ context.Context, key string) (jira.Issue, string, error) {
+	return jira.Issue{Key: key, Summary: "Stub issue"}, "stub description", nil
+}
+
+func (f *fakeJira) GetSprintReport(_ context.Context, boardID, _ int) (jira.SprintReport, error) {
+	return jira.SprintReport{
+		Health:        jira.SprintHealth{BoardID: boardID, SprintName: "Sprint 1", Total: 5, Done: 2},
+		BlockedIssues: []jira.Issue{},
+		ScopeAdded:    []jira.Issue{},
+		ScopeRemoved:  []jira.Issue{},
+	}, nil
+}
+
 // fakeRetriever реализует handlers.KnowledgeRetriever.
 type fakeRetriever struct{}
 

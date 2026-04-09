@@ -132,7 +132,7 @@
 
 После таски 52 (всё собрано):
 
-1. `docker compose up -d`
+1. `docker-compose up -d`
 2. `go build -o bin/mcp-jira ./cmd/server && go build -o bin/mcp-jira-index ./cmd/index`
 3. Экспортировать env (см. README).
 4. `bin/mcp-jira-index migrate` → ноль ошибок, в БД появилась таблица `issues_index`.

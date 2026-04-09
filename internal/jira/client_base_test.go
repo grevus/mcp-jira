@@ -42,7 +42,7 @@ func TestHTTPClient_DoSetsBasicAuthAndAccept(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := NewHTTPClient(ts.URL, email, token, nil)
+	c := NewHTTPClient(ts.URL, email, token, "basic", nil)
 	resp, err := c.do(context.Background(), http.MethodGet, "/rest/api/3/anything?x=1", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -59,7 +59,7 @@ func TestHTTPClient_DoTrimsBaseURLSlash(t *testing.T) {
 	defer ts.Close()
 
 	// baseURL с trailing slash
-	c := NewHTTPClient(ts.URL+"/", "u", "t", nil)
+	c := NewHTTPClient(ts.URL+"/", "u", "t", "basic", nil)
 	resp, err := c.do(context.Background(), http.MethodGet, "/rest/api/3/something", nil)
 	require.NoError(t, err)
 	_, _ = io.Copy(io.Discard, resp.Body)
@@ -118,6 +118,25 @@ func TestCheckStatus(t *testing.T) {
 func TestHTTPClient_DoNilHTTPClient(t *testing.T) {
 	// Работаем в package jira — видны unexported поля.
 	// Когда httpClient=nil, конструктор должен подставить http.DefaultClient.
-	c := NewHTTPClient("https://example.atlassian.net", "u", "t", nil)
+	c := NewHTTPClient("https://example.atlassian.net", "u", "t", "basic", nil)
 	require.NotNil(t, c.http, "c.http не должен быть nil при передаче nil в конструктор")
+}
+
+func TestHTTPClient_BearerAuth(t *testing.T) {
+	const token = "my-personal-access-token"
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		require.Equal(t, "Bearer "+token, authHeader, "bearer: Authorization должен быть Bearer <token>")
+		require.False(t, strings.HasPrefix(authHeader, "Basic "), "bearer: не должно быть Basic Auth")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := NewHTTPClient(ts.URL, "", token, "bearer", nil)
+	resp, err := c.do(context.Background(), http.MethodGet, "/rest/api/3/anything", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	resp.Body.Close()
 }

@@ -44,7 +44,7 @@ func main() {
 	defer stop()
 
 	// Jira HTTP client.
-	jc := jira.NewHTTPClient(cfg.JiraBaseURL, cfg.JiraEmail, cfg.JiraAPIToken, nil)
+	jc := jira.NewHTTPClient(cfg.JiraBaseURL, cfg.JiraEmail, cfg.JiraAPIToken, cfg.JiraAuthType, nil)
 
 	// Embedder: switch by cfg.RAGEmbedder.
 	var emb embed.Embedder

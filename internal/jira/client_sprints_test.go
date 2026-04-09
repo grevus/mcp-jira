@@ -28,7 +28,7 @@ func TestGetSprintHealth_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	result, err := client.GetSprintHealth(context.Background(), 42)
 	require.NoError(t, err)
 
@@ -100,7 +100,7 @@ func TestGetSprintHealth_Aggregation(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	result, err := client.GetSprintHealth(context.Background(), 42)
 	require.NoError(t, err)
 
@@ -122,7 +122,7 @@ func TestGetSprintHealth_NoActiveSprint(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	_, err := client.GetSprintHealth(context.Background(), 42)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no active sprint")
@@ -135,7 +135,7 @@ func TestGetSprintHealth_HTTPError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	_, err := client.GetSprintHealth(context.Background(), 42)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "500")

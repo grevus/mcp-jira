@@ -3,10 +3,13 @@ package jira
 import "time"
 
 type ListIssuesParams struct {
-	ProjectKey string
-	Status     string
-	Assignee   string
-	Limit      int // default 25, max 100 (применяется в client, не здесь)
+	ProjectKey  string
+	Status      string
+	Assignee    string
+	FixVersion  string // опционально; подставляется в JQL `fixVersion = "..."`
+	UpdatedFrom string // опционально; формат "YYYY-MM-DD" или "YYYY-MM-DD HH:MM"
+	UpdatedTo   string // опционально; тот же формат
+	Limit       int    // default 25, max 100 (применяется в client, не здесь)
 }
 
 type Issue struct {
@@ -24,6 +27,15 @@ type SprintHealth struct {
 	InProgress int     `json:"in_progress"`
 	Blocked    int     `json:"blocked"`
 	Velocity   float64 `json:"velocity"`
+}
+
+// SprintReport — расширенный health-отчёт для sprint_health_report tool.
+// Дополняет SprintHealth списками blocked/scope и детерминированным summary.
+type SprintReport struct {
+	Health         SprintHealth `json:"health"`
+	BlockedIssues  []Issue      `json:"blocked_issues"`
+	ScopeAdded     []Issue      `json:"scope_added"`    // TODO(phase2): заполнять через changelog
+	ScopeRemoved   []Issue      `json:"scope_removed"`  // TODO(phase2): заполнять через changelog
 }
 
 type IssueDoc struct {

@@ -45,7 +45,7 @@ func TestListIssues_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	issues, err := client.ListIssues(context.Background(), ListIssuesParams{ProjectKey: "ABC"})
 	require.NoError(t, err)
 
@@ -78,7 +78,7 @@ func TestListIssues_HappyPath(t *testing.T) {
 }
 
 func TestListIssues_InvalidProjectKey(t *testing.T) {
-	client := NewHTTPClient("http://example.com", "user@example.com", "token", nil)
+	client := NewHTTPClient("http://example.com", "user@example.com", "token", "basic", nil)
 	_, err := client.ListIssues(context.Background(), ListIssuesParams{ProjectKey: "abc"})
 	require.Error(t, err)
 	require.True(t, strings.Contains(err.Error(), "invalid project key"), "expected 'invalid project key' in error: %s", err)
@@ -140,7 +140,7 @@ func TestListIssues_Filters(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+			client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 			_, err := client.ListIssues(context.Background(), tc.params)
 			require.NoError(t, err)
 
@@ -162,7 +162,7 @@ func TestListIssues_Error401(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	issues, err := client.ListIssues(context.Background(), ListIssuesParams{ProjectKey: "ABC"})
 	require.Error(t, err)
 	require.Nil(t, issues)
@@ -179,7 +179,7 @@ func TestListIssues_Error500(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	issues, err := client.ListIssues(context.Background(), ListIssuesParams{ProjectKey: "ABC"})
 	require.Error(t, err)
 	require.Nil(t, issues)

@@ -112,7 +112,7 @@ func TestIterateIssueDocs_SinglePage(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -154,7 +154,7 @@ func TestIterateIssueDocs_TwoPages(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -170,7 +170,7 @@ func TestIterateIssueDocs_TwoPages(t *testing.T) {
 }
 
 func TestIterateIssueDocs_InvalidProjectKey(t *testing.T) {
-	client := NewHTTPClient("http://example.com", "user@example.com", "token", nil)
+	client := NewHTTPClient("http://example.com", "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "abc") // lowercase — invalid
 
 	docs, err := collectDocs(t, out, errCh)
@@ -187,7 +187,7 @@ func TestIterateIssueDocs_HTTPError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -243,7 +243,7 @@ func TestIterateIssueDocs_WithComments(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -372,7 +372,7 @@ func TestIterateIssueDocs_StatusHistory(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -414,7 +414,7 @@ func TestIterateIssueDocs_CommentsHTTPError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -518,7 +518,7 @@ func TestIterateIssueDocs_LinkedIssues(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	docs, err := collectDocs(t, out, errCh)
@@ -555,7 +555,7 @@ func TestIterateIssueDocs_CommentsErrorHasContext(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewHTTPClient(srv.URL, "user@example.com", "token", nil)
+	client := NewHTTPClient(srv.URL, "user@example.com", "token", "basic", nil)
 	out, errCh := client.IterateIssueDocs(context.Background(), "ABC")
 
 	_, err := collectDocs(t, out, errCh)

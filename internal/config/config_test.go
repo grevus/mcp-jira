@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/grevus/mcp-jira/internal/config"
@@ -180,6 +182,70 @@ func TestLoad_Stdio_IgnoresMCPAPIKey(t *testing.T) {
 	require.NotNil(t, cfg)
 	require.Equal(t, "", cfg.MCPAPIKey)
 	require.Equal(t, "", cfg.MCPAddr)
+}
+
+func TestLoad_DotEnvFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	envContent := strings.Join([]string{
+		"# comment",
+		"JIRA_BASE_URL=https://dot.atlassian.net",
+		"JIRA_EMAIL=dot@example.com",
+		"JIRA_API_TOKEN=dot-token",
+		"DATABASE_URL=postgres://localhost/dotenv",
+		"VOYAGE_API_KEY=dot-voyage-key",
+	}, "\n")
+	require.NoError(t, os.WriteFile(".env", []byte(envContent), 0o600))
+
+	cfg, err := config.Load(config.ModeStdio)
+	require.NoError(t, err)
+	require.Equal(t, "https://dot.atlassian.net", cfg.JiraBaseURL)
+	require.Equal(t, "dot@example.com", cfg.JiraEmail)
+	require.Equal(t, "dot-token", cfg.JiraAPIToken)
+	require.Equal(t, "postgres://localhost/dotenv", cfg.DatabaseURL)
+	require.Equal(t, "dot-voyage-key", cfg.VoyageAPIKey)
+}
+
+func TestLoad_EnvOverridesDotEnv(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	require.NoError(t, os.WriteFile(".env", []byte("JIRA_BASE_URL=https://from-file.atlassian.net\n"), 0o600))
+	setRequiredEnv(t) // выставляет JIRA_BASE_URL=https://example.atlassian.net
+
+	cfg, err := config.Load(config.ModeStdio)
+	require.NoError(t, err)
+	require.Equal(t, "https://example.atlassian.net", cfg.JiraBaseURL)
+}
+
+func TestLoad_BearerAuthNoEmailRequired(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("JIRA_AUTH_TYPE", "bearer")
+	t.Setenv("JIRA_EMAIL", "") // email не нужен при bearer
+
+	cfg, err := config.Load(config.ModeStdio)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.Equal(t, "bearer", cfg.JiraAuthType)
+	require.Empty(t, cfg.JiraEmail)
+}
+
+func TestLoad_BearerAuthInvalidType(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("JIRA_AUTH_TYPE", "oauth")
+
+	cfg, err := config.Load(config.ModeStdio)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Contains(t, err.Error(), "JIRA_AUTH_TYPE")
+}
+
+func TestLoad_BasicAuthDefaultsWhenUnset(t *testing.T) {
+	setRequiredEnv(t)
+	// JIRA_AUTH_TYPE не задан — должен дефолтиться в "basic"
+
+	cfg, err := config.Load(config.ModeStdio)
+	require.NoError(t, err)
+	require.Equal(t, "basic", cfg.JiraAuthType)
 }
 
 func TestLoad_Index_IgnoresMCPAPIKey(t *testing.T) {

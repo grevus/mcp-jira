@@ -61,8 +61,10 @@ type sprintIssue struct {
 }
 
 type sprintIssueFields struct {
-	Status          sprintIssueStatus  `json:"status"`
-	StoryPoints     *float64           `json:"customfield_10016"`
+	Summary     string            `json:"summary"`
+	Status      sprintIssueStatus `json:"status"`
+	StoryPoints *float64          `json:"customfield_10016"`
+	Assignee    *issueAssignee    `json:"assignee"`
 }
 
 type sprintIssueStatus struct {
@@ -76,7 +78,7 @@ type sprintStatusCategory struct {
 
 // fetchSprintIssues запрашивает задачи спринта для агрегации.
 func (c *HTTPClient) fetchSprintIssues(ctx context.Context, sprintID int) ([]sprintIssue, error) {
-	path := "/rest/agile/1.0/sprint/" + strconv.Itoa(sprintID) + "/issue?fields=status,customfield_10016&maxResults=100"
+	path := "/rest/agile/1.0/sprint/" + strconv.Itoa(sprintID) + "/issue?fields=summary,status,assignee,customfield_10016&maxResults=100"
 
 	resp, err := c.do(ctx, "GET", path, nil)
 	if err != nil {
@@ -147,5 +149,64 @@ func (c *HTTPClient) GetSprintHealth(ctx context.Context, boardID int) (SprintHe
 		InProgress: inProgress,
 		Blocked:    blockedCount,
 		Velocity:   velocity,
+	}, nil
+}
+
+// issueFromSprint конвертирует внутренний sprintIssue в публичный Issue.
+func issueFromSprint(si sprintIssue) Issue {
+	assignee := ""
+	if si.Fields.Assignee != nil {
+		assignee = si.Fields.Assignee.DisplayName
+	}
+	return Issue{
+		Key:      si.Key,
+		Summary:  si.Fields.Summary,
+		Status:   si.Fields.Status.Name,
+		Assignee: assignee,
+	}
+}
+
+// GetSprintReport возвращает расширенный health-отчёт: агрегаты + список blocked задач.
+// Если sprintID <= 0, используется активный спринт доски.
+// ScopeAdded/ScopeRemoved пока не заполняются (требуется анализ changelog — phase 2).
+func (c *HTTPClient) GetSprintReport(ctx context.Context, boardID, sprintID int) (SprintReport, error) {
+	var (
+		name string
+		err  error
+	)
+	if sprintID <= 0 {
+		sprintID, name, err = c.fetchActiveSprint(ctx, boardID)
+		if err != nil {
+			return SprintReport{}, err
+		}
+	}
+
+	issues, err := c.fetchSprintIssues(ctx, sprintID)
+	if err != nil {
+		return SprintReport{}, err
+	}
+
+	total, done, inProgress, blockedCount, velocity := aggregateIssues(issues)
+
+	blocked := make([]Issue, 0, blockedCount)
+	for _, si := range issues {
+		if strings.Contains(strings.ToLower(si.Fields.Status.Name), "block") {
+			blocked = append(blocked, issueFromSprint(si))
+		}
+	}
+
+	return SprintReport{
+		Health: SprintHealth{
+			BoardID:    boardID,
+			SprintName: name,
+			Total:      total,
+			Done:       done,
+			InProgress: inProgress,
+			Blocked:    blockedCount,
+			Velocity:   velocity,
+		},
+		BlockedIssues: blocked,
+		ScopeAdded:    []Issue{},
+		ScopeRemoved:  []Issue{},
 	}, nil
 }

@@ -1,9 +1,38 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
+
+// LoadDotEnv читает файл path в формате KEY=VALUE и устанавливает переменные окружения,
+// которые ещё не заданы. Если файл не найден — молча игнорирует.
+func LoadDotEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		idx := strings.IndexByte(line, '=')
+		if idx <= 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		val := strings.TrimSpace(line[idx+1:])
+		if os.Getenv(key) == "" {
+			_ = os.Setenv(key, val)
+		}
+	}
+}
 
 // Mode определяет режим запуска сервера.
 type Mode string
@@ -20,6 +49,7 @@ type Config struct {
 	JiraBaseURL  string
 	JiraEmail    string
 	JiraAPIToken string
+	JiraAuthType string // "basic" (default) | "bearer" (Jira DC PAT)
 	DatabaseURL  string
 	RAGEmbedder  string // "voyage" или "openai"
 	VoyageAPIKey string
@@ -31,24 +61,36 @@ type Config struct {
 // Load читает переменные окружения и возвращает Config для указанного mode.
 // Общие обязательные переменные: JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, DATABASE_URL.
 func Load(mode Mode) (*Config, error) {
-	required := []struct {
-		env   string
-		value *string
-	}{
-		{"JIRA_BASE_URL", nil},
-		{"JIRA_EMAIL", nil},
-		{"JIRA_API_TOKEN", nil},
-		{"DATABASE_URL", nil},
+	LoadDotEnv(".env")
+
+	authType := os.Getenv("JIRA_AUTH_TYPE")
+	if authType == "" {
+		authType = "basic"
+	}
+	if authType != "basic" && authType != "bearer" {
+		return nil, fmt.Errorf("config: JIRA_AUTH_TYPE must be \"basic\" or \"bearer\", got %q", authType)
 	}
 
-	values := make([]string, len(required))
-	for i, r := range required {
+	required := []struct {
+		env string
+	}{
+		{"JIRA_BASE_URL"},
+		{"JIRA_API_TOKEN"},
+		{"DATABASE_URL"},
+	}
+	if authType == "basic" {
+		required = append(required, struct{ env string }{"JIRA_EMAIL"})
+	}
+
+	values := make(map[string]string, len(required)+1)
+	for _, r := range required {
 		v := os.Getenv(r.env)
 		if v == "" {
 			return nil, fmt.Errorf("config: %s is required", r.env)
 		}
-		values[i] = v
+		values[r.env] = v
 	}
+	values["JIRA_EMAIL"] = os.Getenv("JIRA_EMAIL")
 
 	embedder := os.Getenv("RAG_EMBEDDER")
 	if embedder == "" {
@@ -86,10 +128,11 @@ func Load(mode Mode) (*Config, error) {
 
 	return &Config{
 		Mode:         mode,
-		JiraBaseURL:  values[0],
-		JiraEmail:    values[1],
-		JiraAPIToken: values[2],
-		DatabaseURL:  values[3],
+		JiraBaseURL:  values["JIRA_BASE_URL"],
+		JiraEmail:    values["JIRA_EMAIL"],
+		JiraAPIToken: values["JIRA_API_TOKEN"],
+		JiraAuthType: authType,
+		DatabaseURL:  values["DATABASE_URL"],
 		RAGEmbedder:  embedder,
 		VoyageAPIKey: voyageKey,
 		OpenAIAPIKey: openaiKey,

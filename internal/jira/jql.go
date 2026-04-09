@@ -8,6 +8,17 @@ import (
 
 var projectKeyRe = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 
+// jqlDateRe принимает "YYYY-MM-DD" или "YYYY-MM-DD HH:MM".
+var jqlDateRe = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$`)
+
+// validateJQLDate — whitelist для дат, подставляемых в JQL.
+func validateJQLDate(s string) error {
+	if !jqlDateRe.MatchString(s) {
+		return fmt.Errorf("jira: invalid date %q (want YYYY-MM-DD[ HH:MM])", s)
+	}
+	return nil
+}
+
 // quoteJQL escapes s for safe substitution into a JQL expression and wraps
 // the result in double quotes. Backslashes are replaced before double quotes
 // to avoid double-escaping.
