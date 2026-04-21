@@ -30,16 +30,16 @@ A Go MCP server that exposes practical tools over your Jira instance plus semant
 
 | Tool | What it does | Example prompt |
 |---|---|---|
-| `list_issues` | Filter issues via JQL (project, status, assignee, labels) | *"Show me all open bugs assigned to Alice in ABC"* |
+| `engineering_qa` | Engineering Q&A with RAG citations | *"How did we handle the rate-limit bug in payments?"* |
 | `get_sprint_health` | Active sprint stats: done / in-progress / blocked / velocity | *"How's the current sprint going for board 42?"* |
+| `incident_context` | Similar past incidents, suspected causes, checks | *"We have a DB timeout in prod — what should I check?"* |
+| `list_issues` | Filter issues via JQL (project, status, assignee, labels) | *"Show me all open bugs assigned to Alice in ABC"* |
+| `release_risk_check` | Release risk by `fixVersion` + postmortem search | *"Any risks for release 2.4.0?"* |
 | `search_jira_knowledge` | Semantic search over indexed issues (RAG) | *"Find issues similar to authentication timeout"* |
 | `similar_issues` | Duplicate detection and incident correlation | *"Anything that looks like ABC-1234?"* |
 | `sprint_health_report` | Extended report: risk level, blockers, action items, scope changes | *"Give me a full risk report for the current sprint"* |
 | `standup_digest` | Async standup grouped by time window | *"What did my team ship in the last 24h?"* |
-| `engineering_qa` | Engineering Q&A with RAG citations | *"How did we handle the rate-limit bug in payments?"* |
-| `incident_context` | Similar past incidents, suspected causes, checks | *"We have a DB timeout in prod — what should I check?"* |
 | `ticket_triage` | Suggest owning team and priority from similar issues | *"Which team should own this ticket and what priority?"* |
-| `release_risk_check` | Release risk by `fixVersion` + postmortem search | *"Any risks for release 2.4.0?"* |
 
 Per-tool contracts: [`docs/tools/`](docs/tools/).
 
@@ -68,6 +68,8 @@ mcp-issues-index index --project=ABC
 # 4. Run (stdio for desktop clients)
 mcp-issues --transport=stdio
 ```
+
+> No Docker needed — SQLite is the default store (`~/.mcp-issues/knowledge.db`).
 
 Minimum `.env`:
 
