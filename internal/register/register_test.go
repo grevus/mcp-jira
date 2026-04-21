@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/tenant"
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/tenant"
+	"github.com/grevus/mcp-issues/internal/tracker"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 )

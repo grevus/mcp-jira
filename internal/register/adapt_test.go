@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/grevus/mcp-jira/internal/handlers"
+	"github.com/grevus/mcp-issues/internal/handlers"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 )

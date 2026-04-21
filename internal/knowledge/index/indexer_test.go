@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 // fakeReader emits a fixed list of IssueDoc values and then closes both channels.

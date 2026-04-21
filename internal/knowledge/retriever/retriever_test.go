@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/knowledge/retriever"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge/retriever"
 )
 
 // fakeEmbedder records the texts it received and returns a fixed embedding.

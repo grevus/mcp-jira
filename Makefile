@@ -1,8 +1,8 @@
 .PHONY: build test test-integration lint clean
 
 build:
-	go build -o bin/mcp-jira ./cmd/server
-	go build -o bin/mcp-jira-index ./cmd/index
+	go build -o bin/mcp-issues ./cmd/server
+	go build -o bin/mcp-issues-index ./cmd/index
 
 test:
 	go test ./...

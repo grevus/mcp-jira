@@ -11,17 +11,17 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/grevus/mcp-jira/internal/auth"
-	"github.com/grevus/mcp-jira/internal/config"
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/knowledge/embed"
-	kpg "github.com/grevus/mcp-jira/internal/knowledge/pgvector"
-	ksqlite "github.com/grevus/mcp-jira/internal/knowledge/sqlite"
-	"github.com/grevus/mcp-jira/internal/knowledge/retriever"
-	"github.com/grevus/mcp-jira/internal/register"
-	"github.com/grevus/mcp-jira/internal/tenant"
-	"github.com/grevus/mcp-jira/internal/tracker"
-	jiratracker "github.com/grevus/mcp-jira/internal/tracker/jira"
+	"github.com/grevus/mcp-issues/internal/auth"
+	"github.com/grevus/mcp-issues/internal/config"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge/embed"
+	kpg "github.com/grevus/mcp-issues/internal/knowledge/pgvector"
+	ksqlite "github.com/grevus/mcp-issues/internal/knowledge/sqlite"
+	"github.com/grevus/mcp-issues/internal/knowledge/retriever"
+	"github.com/grevus/mcp-issues/internal/register"
+	"github.com/grevus/mcp-issues/internal/tenant"
+	"github.com/grevus/mcp-issues/internal/tracker"
+	jiratracker "github.com/grevus/mcp-issues/internal/tracker/jira"
 )
 
 func main() {
@@ -133,14 +133,14 @@ func main() {
 	}
 
 	// MCP server.
-	srv := mcp.NewServer(&mcp.Implementation{Name: "mcp-jira", Version: "0.1.0"}, nil)
+	srv := mcp.NewServer(&mcp.Implementation{Name: "mcp-issues", Version: "0.1.0"}, nil)
 	register.Register(srv, reg)
 
 	switch mode {
 	case config.ModeStdio:
 		// stdio: never write to stdout — it's reserved for JSON-RPC.
 		log.SetOutput(os.Stderr)
-		log.Println("mcp-jira: starting stdio transport")
+		log.Println("mcp-issues: starting stdio transport")
 		if err := srv.Run(ctx, &mcp.StdioTransport{}); err != nil {
 			log.Fatalf("stdio transport: %v", err)
 		}
@@ -162,7 +162,7 @@ func main() {
 		mcpHandler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return srv }, nil)
 		e.Any("/mcp", echo.WrapHandler(mcpHandler))
 
-		log.Printf("mcp-jira: starting HTTP transport on %s", cfg.MCPAddr)
+		log.Printf("mcp-issues: starting HTTP transport on %s", cfg.MCPAddr)
 		if err := e.Start(cfg.MCPAddr); err != nil {
 			log.Fatalf("http transport: %v", err)
 		}

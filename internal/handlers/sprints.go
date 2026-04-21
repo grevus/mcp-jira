@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 // SprintReader — узкий интерфейс для handler SprintHealth.

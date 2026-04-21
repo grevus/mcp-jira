@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering a contribution to mcp-jira.
+Thanks for considering a contribution to mcp-issues.
 
 ## Development setup
 
@@ -14,8 +14,8 @@ Thanks for considering a contribution to mcp-jira.
 ```bash
 make build          # both binaries into bin/
 # or:
-go build -o bin/mcp-jira ./cmd/server
-go build -o bin/mcp-jira-index ./cmd/index
+go build -o bin/mcp-issues ./cmd/server
+go build -o bin/mcp-issues-index ./cmd/index
 ```
 
 **Tests:**

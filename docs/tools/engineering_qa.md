@@ -50,7 +50,7 @@
 
 ## Data sources & freshness
 
-- `Search` — pgvector RAG-индекс, только Jira issues. Свежесть = последняя `bin/mcp-jira-index index --project=ABC`.
+- `Search` — pgvector RAG-индекс, только Jira issues. Свежесть = последняя `bin/mcp-issues-index index --project=ABC`.
 
 ## Cost & rate limits
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 // ReleaseRiskCheckInput — параметры MCP tool release_risk_check.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 )
 
 // EngineeringQAInput — параметры MCP tool engineering_qa.

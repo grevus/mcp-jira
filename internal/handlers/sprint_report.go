@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 // SprintReporter — узкий интерфейс для sprint_health_report.

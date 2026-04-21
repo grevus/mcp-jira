@@ -1,4 +1,4 @@
-# mcp-jira
+# mcp-issues
 
 > Спроси у Claude *«что заблокировано в спринте?»* — и получи реальные данные из Jira.
 
@@ -55,18 +55,18 @@ MCP-сервер на Go: набор практичных инструменто
 
 ```bash
 # 1. Установка (или сборка из исходников)
-go install github.com/grevus/mcp-jira/cmd/server@latest
-go install github.com/grevus/mcp-jira/cmd/index@latest
+go install github.com/grevus/mcp-issues/cmd/server@latest
+go install github.com/grevus/mcp-issues/cmd/index@latest
 
 # 2. Конфигурация — скопировать и заполнить credentials для Jira и embedder
 cp .env.example .env
 
 # 3. Миграции + индексация проекта
-mcp-jira-index migrate
-mcp-jira-index index --project=ABC
+mcp-issues-index migrate
+mcp-issues-index index --project=ABC
 
 # 4. Запуск (stdio для десктопных клиентов)
-mcp-jira --transport=stdio
+mcp-issues --transport=stdio
 ```
 
 Минимальный `.env`:
@@ -83,7 +83,7 @@ VOYAGE_API_KEY=your-voyage-api-key
 Jira API token: [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
 Voyage AI: [dash.voyageai.com](https://dash.voyageai.com) (free tier — 200M токенов). **Примечание:** `api.voyageai.com` недоступен из России без VPN — используйте `openai` или `onnx` embedder.
 
-По умолчанию хранилище — SQLite, файл БД создаётся в `~/.mcp-jira/knowledge.db` (переопределяется через `SQLITE_PATH`). Docker не нужен.
+По умолчанию хранилище — SQLite, файл БД создаётся в `~/.mcp-issues/knowledge.db` (переопределяется через `SQLITE_PATH`). Docker не нужен.
 
 ### Подключение к Claude Desktop
 
@@ -92,8 +92,8 @@ Voyage AI: [dash.voyageai.com](https://dash.voyageai.com) (free tier — 200M т
 ```json
 {
   "mcpServers": {
-    "mcp-jira": {
-      "command": "/absolute/path/to/mcp-jira",
+    "mcp-issues": {
+      "command": "/absolute/path/to/mcp-issues",
       "args": ["--transport=stdio"],
       "env": {
         "JIRA_BASE_URL": "https://your-org.atlassian.net",
@@ -107,12 +107,12 @@ Voyage AI: [dash.voyageai.com](https://dash.voyageai.com) (free tier — 200M т
 }
 ```
 
-Перезапустите Claude Desktop — под сервером `mcp-jira` появятся 10 tools.
+Перезапустите Claude Desktop — под сервером `mcp-issues` появятся 10 tools.
 
 Для HTTP-транспорта (Claude Web, remote-клиенты):
 
 ```bash
-MCP_API_KEY=your-secret-key mcp-jira --transport=http
+MCP_API_KEY=your-secret-key mcp-issues --transport=http
 ```
 
 ---
@@ -127,9 +127,9 @@ docker compose up -d
 export KNOWLEDGE_STORE=pgvector
 export DATABASE_URL=postgres://mcp:mcp@localhost:15432/mcp
 
-mcp-jira-index migrate
-mcp-jira-index index --project=ABC
-mcp-jira --transport=stdio
+mcp-issues-index migrate
+mcp-issues-index index --project=ABC
+mcp-issues --transport=stdio
 ```
 
 ---
@@ -152,7 +152,7 @@ mcp-jira --transport=stdio
 | Переменная | Обязательна | Default | Описание |
 |---|---|---|---|
 | `KNOWLEDGE_STORE` | нет | `sqlite` | `sqlite` или `pgvector` |
-| `SQLITE_PATH` | нет | `~/.mcp-jira/knowledge.db` | Путь к файлу SQLite |
+| `SQLITE_PATH` | нет | `~/.mcp-issues/knowledge.db` | Путь к файлу SQLite |
 | `DATABASE_URL` | да (при `pgvector`) | — | Postgres DSN, напр. `postgres://mcp:mcp@localhost:15432/mcp` |
 
 ### Embedder
@@ -182,13 +182,13 @@ mcp-jira --transport=stdio
 Индексатор забирает все issue проекта через JQL pagination, строит эмбеддинг для каждого и сохраняет в knowledge store.
 
 ```bash
-mcp-jira-index index --project=ABC
+mcp-issues-index index --project=ABC
 ```
 
 Multi-tenant режим (keys file):
 
 ```bash
-mcp-jira-index index --project=ABC --tenant=acme --keys-file=./keys.yaml
+mcp-issues-index index --project=ABC --tenant=acme --keys-file=./keys.yaml
 ```
 
 Переиндексация идемпотентна — `ReplaceProject` атомарно удаляет и вставляет все документы проекта в одной транзакции.
@@ -196,7 +196,7 @@ mcp-jira-index index --project=ABC --tenant=acme --keys-file=./keys.yaml
 Встроенного планировщика нет. Запускайте через cron или CI:
 
 ```cron
-0 */6 * * * /path/to/mcp-jira-index index --project=ABC >> /var/log/mcp-jira-index.log 2>&1
+0 */6 * * * /path/to/mcp-issues-index index --project=ABC >> /var/log/mcp-issues-index.log 2>&1
 ```
 
 ---

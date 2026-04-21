@@ -6,7 +6,7 @@ import (
 
 	pgvec "github.com/pgvector/pgvector-go"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 )
 
 const upsertSQL = `

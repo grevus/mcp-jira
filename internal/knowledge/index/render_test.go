@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/tracker"
 	"github.com/stretchr/testify/require"
 )
 

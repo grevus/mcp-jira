@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grevus/mcp-jira/internal/config"
+	"github.com/grevus/mcp-issues/internal/config"
 	"github.com/stretchr/testify/require"
 )
 

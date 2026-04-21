@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 )
 
 // unit vector of length 1024 with a 1.0 at position pos.

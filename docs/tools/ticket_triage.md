@@ -70,7 +70,7 @@
 ## Data sources & freshness
 
 - `GetIssue` — Jira live.
-- Похожие задачи — pgvector, свежесть = последняя `bin/mcp-jira-index index --project=ABC`.
+- Похожие задачи — pgvector, свежесть = последняя `bin/mcp-issues-index index --project=ABC`.
 
 ## Cost & rate limits
 

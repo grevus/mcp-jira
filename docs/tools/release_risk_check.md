@@ -60,7 +60,7 @@
 ## Data sources & freshness
 
 - Jira `/rest/api/3/search/jql` — live.
-- pgvector — свежесть равна последней `bin/mcp-jira-index index --project=...`.
+- pgvector — свежесть равна последней `bin/mcp-issues-index index --project=...`.
 
 ## Cost & rate limits
 

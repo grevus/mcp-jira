@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 var issueKeyRe = regexp.MustCompile(`^[A-Z][A-Z0-9_]*-\d+$`)

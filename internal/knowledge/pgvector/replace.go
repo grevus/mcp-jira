@@ -6,7 +6,7 @@ import (
 
 	pgvec "github.com/pgvector/pgvector-go"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 )
 
 const deleteProjectSQL = `DELETE FROM issues_index WHERE tenant_id = $1 AND project_key = $2`

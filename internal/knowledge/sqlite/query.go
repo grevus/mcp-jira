@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 )
 
 // Search returns the topK nearest documents to queryEmbedding filtered by f.

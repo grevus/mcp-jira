@@ -1,4 +1,4 @@
-# mcp-jira
+# mcp-issues
 
 > Ask Claude *"what's blocked in this sprint?"* and get real Jira data back.
 
@@ -55,18 +55,18 @@ Transports:
 
 ```bash
 # 1. Install (or build from source)
-go install github.com/grevus/mcp-jira/cmd/server@latest
-go install github.com/grevus/mcp-jira/cmd/index@latest
+go install github.com/grevus/mcp-issues/cmd/server@latest
+go install github.com/grevus/mcp-issues/cmd/index@latest
 
 # 2. Configure — copy and fill in Jira + embedder credentials
 cp .env.example .env
 
 # 3. Migrate + index a project
-mcp-jira-index migrate
-mcp-jira-index index --project=ABC
+mcp-issues-index migrate
+mcp-issues-index index --project=ABC
 
 # 4. Run (stdio for desktop clients)
-mcp-jira --transport=stdio
+mcp-issues --transport=stdio
 ```
 
 Minimum `.env`:
@@ -83,7 +83,7 @@ VOYAGE_API_KEY=your-voyage-api-key
 Get a Jira token at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
 Voyage AI key at [dash.voyageai.com](https://dash.voyageai.com) (free tier: 200M tokens).
 
-SQLite is the default store — the DB lands at `~/.mcp-jira/knowledge.db` (override with `SQLITE_PATH`). No Docker needed.
+SQLite is the default store — the DB lands at `~/.mcp-issues/knowledge.db` (override with `SQLITE_PATH`). No Docker needed.
 
 ### Connect to Claude Desktop
 
@@ -92,8 +92,8 @@ Add to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claud
 ```json
 {
   "mcpServers": {
-    "mcp-jira": {
-      "command": "/absolute/path/to/mcp-jira",
+    "mcp-issues": {
+      "command": "/absolute/path/to/mcp-issues",
       "args": ["--transport=stdio"],
       "env": {
         "JIRA_BASE_URL": "https://your-org.atlassian.net",
@@ -107,12 +107,12 @@ Add to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claud
 }
 ```
 
-Restart Claude Desktop — the 10 tools appear under the `mcp-jira` server.
+Restart Claude Desktop — the 10 tools appear under the `mcp-issues` server.
 
 For HTTP transport (Claude Web, remote clients):
 
 ```bash
-MCP_API_KEY=your-secret-key mcp-jira --transport=http
+MCP_API_KEY=your-secret-key mcp-issues --transport=http
 ```
 
 ---
@@ -127,9 +127,9 @@ docker compose up -d
 export KNOWLEDGE_STORE=pgvector
 export DATABASE_URL=postgres://mcp:mcp@localhost:15432/mcp
 
-mcp-jira-index migrate
-mcp-jira-index index --project=ABC
-mcp-jira --transport=stdio
+mcp-issues-index migrate
+mcp-issues-index index --project=ABC
+mcp-issues --transport=stdio
 ```
 
 ---
@@ -152,7 +152,7 @@ All configuration is via environment variables (or a `.env` file in the working 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `KNOWLEDGE_STORE` | no | `sqlite` | `sqlite` or `pgvector` |
-| `SQLITE_PATH` | no | `~/.mcp-jira/knowledge.db` | SQLite DB file path |
+| `SQLITE_PATH` | no | `~/.mcp-issues/knowledge.db` | SQLite DB file path |
 | `DATABASE_URL` | yes (if `pgvector`) | — | Postgres DSN, e.g. `postgres://mcp:mcp@localhost:15432/mcp` |
 
 ### Embedder
@@ -182,13 +182,13 @@ Embedding dimension is fixed at **1024**. Choose one provider:
 The indexer fetches all issues in a project via JQL pagination, embeds each one, and stores them in the knowledge store.
 
 ```bash
-mcp-jira-index index --project=ABC
+mcp-issues-index index --project=ABC
 ```
 
 Multi-tenant mode (keys file):
 
 ```bash
-mcp-jira-index index --project=ABC --tenant=acme --keys-file=./keys.yaml
+mcp-issues-index index --project=ABC --tenant=acme --keys-file=./keys.yaml
 ```
 
 Re-indexing is idempotent — `ReplaceProject` atomically deletes and re-inserts all documents for that project key.
@@ -196,7 +196,7 @@ Re-indexing is idempotent — `ReplaceProject` atomically deletes and re-inserts
 No built-in scheduler. Run via cron or CI, e.g.:
 
 ```cron
-0 */6 * * * /path/to/mcp-jira-index index --project=ABC >> /var/log/mcp-jira-index.log 2>&1
+0 */6 * * * /path/to/mcp-issues-index index --project=ABC >> /var/log/mcp-issues-index.log 2>&1
 ```
 
 ---

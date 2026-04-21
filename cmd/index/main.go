@@ -11,14 +11,14 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/grevus/mcp-jira/internal/config"
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/knowledge/embed"
-	kindex "github.com/grevus/mcp-jira/internal/knowledge/index"
-	kpg "github.com/grevus/mcp-jira/internal/knowledge/pgvector"
-	ksqlite "github.com/grevus/mcp-jira/internal/knowledge/sqlite"
-	"github.com/grevus/mcp-jira/internal/tenant"
-	jiratracker "github.com/grevus/mcp-jira/internal/tracker/jira"
+	"github.com/grevus/mcp-issues/internal/config"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge/embed"
+	kindex "github.com/grevus/mcp-issues/internal/knowledge/index"
+	kpg "github.com/grevus/mcp-issues/internal/knowledge/pgvector"
+	ksqlite "github.com/grevus/mcp-issues/internal/knowledge/sqlite"
+	"github.com/grevus/mcp-issues/internal/tenant"
+	jiratracker "github.com/grevus/mcp-issues/internal/tracker/jira"
 )
 
 func main() {
@@ -45,7 +45,7 @@ func main() {
 }
 
 func usage() {
-	log.Println("usage: mcp-jira-index <subcommand> [flags]")
+	log.Println("usage: mcp-issues-index <subcommand> [flags]")
 	log.Println("  migrate                              run database migrations")
 	log.Println("  index --project=KEY                  reindex a Jira project (legacy env mode)")
 	log.Println("  index --project=KEY --tenant=NAME --keys-file=PATH  reindex for a specific tenant")

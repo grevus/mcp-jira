@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 // Config — конфигурация одного тенанта из keys.yaml.

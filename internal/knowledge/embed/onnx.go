@@ -36,7 +36,7 @@ func NewONNXEmbedder(modelPath, libDir string) (*ONNXEmbedder, error) {
 
 	pipeline, err := hugot.NewPipeline(session, hugot.FeatureExtractionConfig{
 		ModelPath:    modelPath,
-		Name:         "mcp-jira-embed",
+		Name:         "mcp-issues-embed",
 		OnnxFilename: "model.onnx",
 	})
 	if err != nil {

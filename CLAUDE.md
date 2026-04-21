@@ -24,7 +24,7 @@ Transports: stdio (Claude Desktop/Cursor) and Streamable HTTP `/mcp` with API ke
 
 ## Tech stack
 
-- **Go 1.26+**, two binaries: `mcp-jira` (server) and `mcp-jira-index` (CLI indexer).
+- **Go 1.26+**, two binaries: `mcp-issues` (server) and `mcp-issues-index` (CLI indexer).
 - `github.com/modelcontextprotocol/go-sdk` — MCP server. Real API: `mcp.NewServer(&Implementation{}, opts)`, `mcp.AddTool[In,Out](srv, &Tool{}, h)`, `srv.Run(ctx, &StdioTransport{})`, `mcp.NewStreamableHTTPHandler(...)`. **SSE and `srv.AddTool(name,desc,fn)` are hallucinated API — do not use.**
 - `github.com/labstack/echo/v4` — HTTP only in `cmd/server`.
 - **Knowledge store**: `KNOWLEDGE_STORE=sqlite` (default, local file via sqlite-vec) or `pgvector` (Postgres + pgvector).
@@ -67,18 +67,18 @@ cmd/index/main.go             migrate | index --project=ABC
 
 ```bash
 # Build
-go build -o bin/mcp-jira ./cmd/server
-go build -o bin/mcp-jira-index ./cmd/index
+go build -o bin/mcp-issues ./cmd/server
+go build -o bin/mcp-issues-index ./cmd/index
 
 # SQLite mode (default, no Docker needed)
-bin/mcp-jira-index migrate
-bin/mcp-jira-index index --project=ABC
-bin/mcp-jira --transport=stdio
+bin/mcp-issues-index migrate
+bin/mcp-issues-index index --project=ABC
+bin/mcp-issues --transport=stdio
 
 # pgvector mode (requires Docker)
 docker compose up -d
-KNOWLEDGE_STORE=pgvector DATABASE_URL=postgres://mcp:mcp@localhost:15432/mcp bin/mcp-jira-index migrate
-KNOWLEDGE_STORE=pgvector DATABASE_URL=postgres://mcp:mcp@localhost:15432/mcp bin/mcp-jira --transport=stdio
+KNOWLEDGE_STORE=pgvector DATABASE_URL=postgres://mcp:mcp@localhost:15432/mcp bin/mcp-issues-index migrate
+KNOWLEDGE_STORE=pgvector DATABASE_URL=postgres://mcp:mcp@localhost:15432/mcp bin/mcp-issues --transport=stdio
 
 # Tests
 go test ./...                                 # unit tests

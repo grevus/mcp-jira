@@ -52,7 +52,7 @@ type Config struct {
 	JiraAuthType   string // "basic" (default) | "bearer" (Jira DC PAT)
 	KnowledgeStore string // "sqlite" (default) | "pgvector"
 	DatabaseURL    string // only for pgvector
-	SQLitePath     string // only for sqlite, default "~/.mcp-jira/knowledge.db"
+	SQLitePath     string // only for sqlite, default "~/.mcp-issues/knowledge.db"
 	RAGEmbedder    string // "voyage" | "openai" | "onnx"
 	VoyageAPIKey   string
 	OpenAIAPIKey   string
@@ -89,7 +89,7 @@ func Load(mode Mode) (*Config, error) {
 		sqlitePath = os.Getenv("SQLITE_PATH")
 		if sqlitePath == "" {
 			home, _ := os.UserHomeDir()
-			sqlitePath = home + "/.mcp-jira/knowledge.db"
+			sqlitePath = home + "/.mcp-issues/knowledge.db"
 		}
 	}
 

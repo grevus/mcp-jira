@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/grevus/mcp-jira/internal/auth"
+	"github.com/grevus/mcp-issues/internal/auth"
 	"github.com/stretchr/testify/require"
 )
 

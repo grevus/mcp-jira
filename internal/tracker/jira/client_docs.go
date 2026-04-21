@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/grevus/mcp-jira/internal/tracker"
+	"github.com/grevus/mcp-issues/internal/tracker"
 )
 
 // commentsResponse — приватный DTO для парсинга ответа GET /rest/api/3/issue/{key}/comment.

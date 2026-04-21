@@ -1,8 +1,8 @@
 package register
 
 import (
-	"github.com/grevus/mcp-jira/internal/handlers"
-	"github.com/grevus/mcp-jira/internal/tenant"
+	"github.com/grevus/mcp-issues/internal/handlers"
+	"github.com/grevus/mcp-issues/internal/tenant"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -42,6 +42,7 @@ dist/
 .agent/
 .agents/
 .claire/
+.specify/
 
 # Internal docs (plans, specs — not for public)
 docs/superpowers/

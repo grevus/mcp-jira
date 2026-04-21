@@ -1,4 +1,4 @@
-module github.com/grevus/mcp-jira
+module github.com/grevus/mcp-issues
 
 go 1.26.1
 

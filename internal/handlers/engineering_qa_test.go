@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 	"github.com/stretchr/testify/require"
 )
 

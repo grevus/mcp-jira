@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/grevus/mcp-jira/internal/knowledge"
+	"github.com/grevus/mcp-issues/internal/knowledge"
 )
 
 // ReplaceProject atomically removes all documents for tenantID+projectKey
