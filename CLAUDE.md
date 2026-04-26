@@ -24,9 +24,9 @@ Transports: stdio (Claude Desktop/Cursor) and Streamable HTTP `/mcp` with API ke
 
 ## Tech stack
 
-- **Go 1.26+**, two binaries: `mcp-issues` (server) and `mcp-issues-index` (CLI indexer).
+- **Go 1.25+**, two binaries: `mcp-issues` (server) and `mcp-issues-index` (CLI indexer).
 - `github.com/modelcontextprotocol/go-sdk` — MCP server. Real API: `mcp.NewServer(&Implementation{}, opts)`, `mcp.AddTool[In,Out](srv, &Tool{}, h)`, `srv.Run(ctx, &StdioTransport{})`, `mcp.NewStreamableHTTPHandler(...)`. **SSE and `srv.AddTool(name,desc,fn)` are hallucinated API — do not use.**
-- `github.com/labstack/echo/v4` — HTTP only in `cmd/server`.
+- `github.com/labstack/echo/v4` — HTTP only in `cmd/mcp-issues`.
 - **Knowledge store**: `KNOWLEDGE_STORE=sqlite` (default, local file via sqlite-vec) or `pgvector` (Postgres + pgvector).
 - **Embedders**: Voyage AI (default), OpenAI, ONNX (local). Choice via `RAG_EMBEDDER=voyage|openai|onnx`. Dimension fixed at 1024.
 - `github.com/pressly/goose/v3` — migrations (pgvector mode).
@@ -39,8 +39,8 @@ Transports: stdio (Claude Desktop/Cursor) and Streamable HTTP `/mcp` with API ke
 Dependencies flow top-down only. MCP SDK and Echo do not leak into business logic.
 
 ```
-cmd/server/main.go            stdio | streamable-http (Echo)
-cmd/index/main.go             migrate | index --project=ABC
+cmd/mcp-issues/main.go        stdio | streamable-http (Echo)
+cmd/mcp-issues-index/main.go  migrate | index --project=ABC
   └─ internal/register        ONLY importer of go-sdk/mcp; adapt[In,Out] + Register
        └─ internal/handlers   Handler[In,Out] func(ctx, In) (Out, error); knows nothing about mcp/echo
             └─ narrow interfaces (IssueLister, IssueFetcher, SprintReader, SprintReporter, ...)
@@ -57,7 +57,7 @@ cmd/index/main.go             migrate | index --project=ABC
 **Invariants:**
 - `internal/handlers` imports only `context`/`json`/`fmt` + domain types. **Never** `mcp` or `echo`.
 - `internal/register` is the only bridge to `go-sdk/mcp`. SDK updates — changes only here.
-- Echo only in `cmd/server`. `auth.Middleware` stays stdlib-compatible.
+- Echo only in `cmd/mcp-issues`. `auth.Middleware` stays stdlib-compatible.
 - `internal/knowledge/*` knows nothing about MCP — reusable subsystem.
 - Each handler takes a **narrow** interface, not a fat `jira.Client`.
 - **Stdio mode: NEVER write to stdout** (reserved for JSON-RPC). Use `log.*` (stderr) only.
@@ -67,8 +67,8 @@ cmd/index/main.go             migrate | index --project=ABC
 
 ```bash
 # Build
-go build -o bin/mcp-issues ./cmd/server
-go build -o bin/mcp-issues-index ./cmd/index
+go build -o bin/mcp-issues ./cmd/mcp-issues
+go build -o bin/mcp-issues-index ./cmd/mcp-issues-index
 
 # SQLite mode (default, no Docker needed)
 bin/mcp-issues-index migrate

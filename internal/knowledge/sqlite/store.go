@@ -48,7 +48,7 @@ func (s *SqliteStore) Close() error {
 	return s.db.Close()
 }
 
-// DB returns the underlying *sql.DB for use in migrations (e.g. from cmd/index).
+// DB returns the underlying *sql.DB for use in migrations (e.g. from cmd/mcp-issues-index).
 func (s *SqliteStore) DB() *sql.DB {
 	return s.db
 }

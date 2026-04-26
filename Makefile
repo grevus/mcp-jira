@@ -1,8 +1,8 @@
 .PHONY: build test test-integration lint clean
 
 build:
-	go build -o bin/mcp-issues ./cmd/server
-	go build -o bin/mcp-issues-index ./cmd/index
+	go build -o bin/mcp-issues ./cmd/mcp-issues
+	go build -o bin/mcp-issues-index ./cmd/mcp-issues-index
 
 test:
 	go test ./...
@@ -15,4 +15,4 @@ lint:
 	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run || echo "golangci-lint not installed, skipping"
 
 clean:
-	rm -rf bin/ server index
+	rm -rf bin/ mcp-issues mcp-issues-index

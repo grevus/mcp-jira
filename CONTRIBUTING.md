@@ -14,8 +14,8 @@ Thanks for considering a contribution to mcp-issues.
 ```bash
 make build          # both binaries into bin/
 # or:
-go build -o bin/mcp-issues ./cmd/server
-go build -o bin/mcp-issues-index ./cmd/index
+go build -o bin/mcp-issues ./cmd/mcp-issues
+go build -o bin/mcp-issues-index ./cmd/mcp-issues-index
 ```
 
 **Tests:**
@@ -64,7 +64,7 @@ The architecture is deliberately flat — no plugin registry, no DI container. A
 
 - Dependency direction: `cmd → register → handlers → narrow interfaces → providers/stores`. Handlers must never import MCP or Echo.
 - `internal/register` is the only bridge to `go-sdk/mcp`.
-- Echo only in `cmd/server`. `internal/auth` stays `net/http`-compatible.
+- Echo only in `cmd/mcp-issues`. `internal/auth` stays `net/http`-compatible.
 - **Stdio mode: never write to stdout** (reserved for JSON-RPC). Use `log.*` (stderr) only.
 - `MCP_API_KEY` required only for `--transport=http`.
 

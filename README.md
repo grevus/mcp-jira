@@ -14,18 +14,6 @@ A Go MCP server that exposes practical tools over your Jira instance plus semant
 
 ---
 
-## Demo
-
-![demo](assets/demo.gif)
-
-<!-- TODO: record a 15–25s GIF:
-  1. User types "What's blocked in ABC sprint?" in Claude
-  2. Claude calls get_sprint_health
-  3. Response with real sprint data
--->
-
----
-
 ## Tools
 
 | Tool | What it does | Example prompt |
@@ -55,8 +43,8 @@ Transports:
 
 ```bash
 # 1. Install (or build from source)
-go install github.com/grevus/mcp-issues/cmd/server@latest
-go install github.com/grevus/mcp-issues/cmd/index@latest
+go install github.com/grevus/mcp-issues/cmd/mcp-issues@latest
+go install github.com/grevus/mcp-issues/cmd/mcp-issues-index@latest
 
 # 2. Configure — copy and fill in Jira + embedder credentials
 cp .env.example .env
@@ -206,8 +194,8 @@ No built-in scheduler. Run via cron or CI, e.g.:
 ## Architecture
 
 ```
-cmd/server          stdio | streamable-http (Echo)
-cmd/index           migrate | index --project=ABC
+cmd/mcp-issues          stdio | streamable-http (Echo)
+cmd/mcp-issues-index    migrate | index --project=ABC
   └─ internal/register          only importer of go-sdk/mcp
        └─ internal/handlers     pure business logic, knows nothing about mcp/echo
             └─ narrow interfaces (IssueLister, SprintReader, ...)

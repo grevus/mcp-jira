@@ -55,8 +55,8 @@ MCP-сервер на Go: набор практичных инструменто
 
 ```bash
 # 1. Установка (или сборка из исходников)
-go install github.com/grevus/mcp-issues/cmd/server@latest
-go install github.com/grevus/mcp-issues/cmd/index@latest
+go install github.com/grevus/mcp-issues/cmd/mcp-issues@latest
+go install github.com/grevus/mcp-issues/cmd/mcp-issues-index@latest
 
 # 2. Конфигурация — скопировать и заполнить credentials для Jira и embedder
 cp .env.example .env
@@ -204,8 +204,8 @@ mcp-issues-index index --project=ABC --tenant=acme --keys-file=./keys.yaml
 ## Архитектура
 
 ```
-cmd/server          stdio | streamable-http (Echo)
-cmd/index           migrate | index --project=ABC
+cmd/mcp-issues          stdio | streamable-http (Echo)
+cmd/mcp-issues-index    migrate | index --project=ABC
   └─ internal/register          единственный импортёр go-sdk/mcp
        └─ internal/handlers     чистая бизнес-логика, не знает о mcp/echo
             └─ узкие интерфейсы (IssueLister, SprintReader, ...)
